@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"context"
@@ -431,7 +431,7 @@ func (pool *dacV3WorkerWriter) flusher() {
 	}
 
 	// FINAL FLUSH trabajos que no se pudieron encolar se pierden
-	//No arriegar el actual wallbuffer 
+	//No arriegar el actual wallbuffer
 	for i := 0; i < pool.totalWallBuffer; i++ {
 
 		if len(batch[i]) > 0 {

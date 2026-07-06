@@ -1,11 +1,9 @@
-package main
+package dacV3
 
 import (
 	"encoding/binary"
 	"errors"
-
 )
-
 
 func (b indexBuffer) newSubIndex(hash [32]byte) (id int, found bool) {
 

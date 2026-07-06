@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"errors"
@@ -251,14 +251,14 @@ var supportedConfigs = []SizeConfig{
 }
 
 type DacV3Options struct {
-	MaxReserveSize        int64
-	SsdNIopsMili          uint32
-	SsdPageSize           uint32
-	TotalWallBuffer       uint32
+	MaxReserveSize         int64
+	SsdNIopsMili           uint32
+	SsdPageSize            uint32
+	TotalWallBuffer        uint32
 	NBuffersAvailableIndex uint32 // Corregido 'Avaible' a 'Available' para mayor precisión
-	SupportedSizes        []SizeConfig
-	NWorkers              int
-	QueueSize             int
+	SupportedSizes         []SizeConfig
+	NWorkers               int
+	QueueSize              int
 }
 
 func main() {

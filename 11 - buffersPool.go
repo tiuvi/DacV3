@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"sync"
@@ -6,7 +6,7 @@ import (
 
 type bufferArena struct {
 	mu             sync.RWMutex
-	arenas         [][]byte 
+	arenas         [][]byte
 	freeIDs        []uint32 // Aquí guardaremos los IDs internos (0, 1, 2...)
 	nextID         uint32   // Este es el ID interno. Empezará en 0.
 	blocksPerArena uint32

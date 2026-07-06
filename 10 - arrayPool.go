@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"sync"
@@ -27,8 +27,8 @@ func NewPagedPool[T any]() *PagedPool[T] {
 
 	// Añadimos el primer chunk (el ID 0 quedará en la posición items[0] que nunca será devuelta)
 	pool.chunks = append(pool.chunks, &Chunk[T]{})
-	
-	// CONSEJO 1: Inicializamos en 0. 
+
+	// CONSEJO 1: Inicializamos en 0.
 	// Así, el primer Add(1) devolverá ID = 1. (El ID 0 es ignorado naturalmente).
 	pool.nextID.Store(0)
 

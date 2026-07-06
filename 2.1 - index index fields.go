@@ -1,12 +1,10 @@
-package main
+package dacV3
 
 import (
 	"encoding/binary"
 	"hash/crc32"
 	"math"
-
 )
-
 
 func (b indexBuffer) CalCheckSum() uint32 {
 	// Se calcula el checksum desde el final del checksum hasta el límite de la página

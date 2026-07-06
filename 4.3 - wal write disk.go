@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 func (pool *dacV3WorkerWriter) processWriteUnSafe(j *jobWriter) {
 
@@ -32,7 +32,7 @@ func (pool *dacV3WorkerWriter) processWriteDisk(batch []*jobWriter, chooseBuffer
 	// Debemos buscar el mayor dataOffsetEnd entre todas las tareas de todos los jobs
 	var totalDataSize int64
 	for _, j := range batch {
-		
+
 		for i := range j.task {
 			if j.task[i].dataOffsetEnd > totalDataSize {
 				totalDataSize = j.task[i].dataOffsetEnd

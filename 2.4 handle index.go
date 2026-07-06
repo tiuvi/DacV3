@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"errors"
@@ -16,7 +16,6 @@ func (sfDacV3 *dacV3) newIndex(offset int64, sizePagination uint32) (err error) 
 
 	index.mu.Lock()
 	defer index.mu.Unlock()
-
 
 	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
 
@@ -46,7 +45,6 @@ func (sfDacV3 *dacV3) newIndex(offset int64, sizePagination uint32) (err error) 
 
 	return
 }
-
 
 // ESta funcion actua dentro de un bloqueo
 func (sfDacV3 *dacV3) updateIndex(index *Index) (err error) {

@@ -1,8 +1,6 @@
-package main
+package dacV3
 
 import (
-
-
 	"encoding/binary"
 	"encoding/hex"
 	"errors"

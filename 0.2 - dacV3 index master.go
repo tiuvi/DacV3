@@ -1,8 +1,4 @@
-package main
-
-import (
-
-)
+package dacV3
 
 const (
 	Kilobyte = 1024
@@ -10,9 +6,3 @@ const (
 	Gigabyte = Megabyte * 1024
 	Terabyte = Gigabyte * 1024
 )
-
-
-
-
-
-

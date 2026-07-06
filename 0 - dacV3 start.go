@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"log"
@@ -218,7 +218,6 @@ func (sfDacV3 *dacV3) startHandleWallBuffer(ssdNIopsMili uint32, ssdPageSize uin
 
 var globalDacV3 *dacV3
 
-
 func newDacV3(opts DacV3Options) *dacV3 {
 
 	sfDacV3 := openFileDacV3()
@@ -240,7 +239,6 @@ func newDacV3(opts DacV3Options) *dacV3 {
 
 	return sfDacV3
 }
-
 
 // AlignedBlock crea un buffer de tamaño 'size' alineado a 4096 bytes.
 func MakeAlignedBlock(size int) []byte {

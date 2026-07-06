@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"errors"
@@ -33,7 +33,6 @@ const (
 	field_HashSearchEnd  = field_HashSearchInit + 32
 )
 
-
 // subindices tamaño
 const (
 
@@ -50,7 +49,7 @@ const (
 	subIndex_Name_Init = 0
 	subIndex_Name_End  = 8 * 8
 
-	subIndex_LastAccess_Init = subIndex_Name_End 
+	subIndex_LastAccess_Init = subIndex_Name_End
 	subIndex_LastAccess_End  = subIndex_Name_End + 8
 
 	subIndex_LastUpdate_Init = subIndex_LastAccess_End
@@ -58,7 +57,6 @@ const (
 )
 
 const indexMetricsTotalSize = subIndex_LastUpdate_End * maxSubIndexPerIndex
-
 
 const sizeSubIndexMetric = BufferAlignSize / maxSubIndexPerIndex
 
@@ -69,13 +67,11 @@ const sizeSubIndexInBlock = sizeSubIndex * maxSubIndexPerIndex
 // Sin usar sizeTotalIndex
 const sizeTotalIndex = sizeSubIndexInBlock + field_HashSearchEnd
 
-//Calculo del indice + el numero de subindices por el tamaño de cada indice
+// Calculo del indice + el numero de subindices por el tamaño de cada indice
 const totalIndexAndSubIndex = BufferAlignSize - sizeTotalIndex
 
-//Dejamos padding para los indices empezando los subindex posterior.
+// Dejamos padding para los indices empezando los subindex posterior.
 const field_subIndexInit = BufferAlignSize - sizeSubIndexInBlock
-
-
 
 // Indice
 type Index struct {

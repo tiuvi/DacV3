@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 import (
 	"errors"
@@ -50,7 +50,6 @@ func (sf *dacV3) WriteAt(data []byte, offset int64) {
 	}
 
 }
-
 
 func (sf *dacV3) ExpandSize(newSize int64) error {
 

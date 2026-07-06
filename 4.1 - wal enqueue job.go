@@ -1,4 +1,4 @@
-package main
+package dacV3
 
 /*
 ESCRITURA:
@@ -88,7 +88,6 @@ func (pool *dacV3WorkerWriter) WriteWall(idDataArena uint32, data []byte, offset
 	}
 }
 
-
 func newWriterTask(idDataArena uint32, data []byte, offset int64) jobWriterTask {
 
 	return jobWriterTask{
@@ -152,7 +151,6 @@ func (pool *dacV3WorkerWriter) WriteUnSafeAsync(jTask *jobWriterTask) {
 
 	//ESto deberia estar completado ya
 	//resp chan error
-
 
 	//No se modifican hace falta para escribir directo
 	//offset

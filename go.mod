@@ -1,4 +1,4 @@
-module dacv3
+module github.com/tiuvi/DacV3
 
 go 1.25.4
 

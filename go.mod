@@ -1,0 +1,10 @@
+module dacv3
+
+go 1.25.4
+
+require (
+	github.com/zeebo/blake3 v0.2.4
+	golang.org/x/sys v0.46.0
+)
+
+require github.com/klauspost/cpuid/v2 v2.0.12 // indirect

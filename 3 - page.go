@@ -13,8 +13,11 @@ type Page struct {
 	idSubIndex uint8
 }
 
+
+
 // Mapa de nombres con direccion al array con los datos de cada archivo
 var files map[[32]byte]int
+
 
 // Array que almacenara los datos de todos los archivos
 var pageBytes = make([]Page, 0)

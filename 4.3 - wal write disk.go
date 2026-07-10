@@ -1,12 +1,14 @@
 package dacV3
 
-func (pool *dacV3WorkerWriter) processWriteUnSafe(j *jobWriter) {
+import "encoding/binary"
+
+func (sfDacV3 *dacV3) processWriteUnSafe(j *jobWriter) {
 
 	// Iteramos sobre cada tarea del lote
 	for i := range j.task {
 
 		// 1. Escribimos la data de la tarea en su offset original en disco
-		globalDacV3.WriteAt(j.task[i].data, j.task[i].offset)
+		sfDacV3.WriteAt(j.task[i].data, j.task[i].offset)
 
 		// 2. Si esta tarea no requiere borrar la arena, pasamos a la SIETE tarea
 		// ¡IMPORTANTE!: Usamos 'continue' en lugar de 'return' para no abortar el resto del batch
@@ -15,14 +17,17 @@ func (pool *dacV3WorkerWriter) processWriteUnSafe(j *jobWriter) {
 		}
 
 		// 3. Eliminamos la arena de memoria correspondiente a esta tarea
-		mapArena := globalDacV3.dataPools[len(j.task[i].data)]
+		mapArena := sfDacV3.dataPools[len(j.task[i].data)]
 
+		
 		mapArena.delBufferArena(j.task[i].idDataArena)
 	}
 
 }
 
-func (pool *dacV3WorkerWriter) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
+func (sfDacV3 *dacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	if len(batch) == 0 {
 		return
@@ -44,11 +49,16 @@ func (pool *dacV3WorkerWriter) processWriteDisk(batch []*jobWriter, chooseBuffer
 	}
 
 	// 2. Escribimos en el disco de manera síncrona el bloque del buffer usado
-	dataToWrite := pool.wallBuffers[chooseBuffer][:totalDataSize]
+	
+	// Escribimos la secuencia en el bloque de control del buffer (primeros 8 bytes)
+	binary.BigEndian.PutUint64(pool.walBuffersTotal[chooseBuffer][0:8], pool.walSequence)
+	pool.walSequence++
 
-	offsetWrite := int64(chooseBuffer) * pool.wallLenBuffer
+	dataToWrite := pool.walBuffersTotal[chooseBuffer][:totalDataSize]
 
-	globalDacV3.WriteAtSync(dataToWrite, offsetWrite)
+	offsetWrite := int64(chooseBuffer) * pool.walLenTotalBytes
+
+	sfDacV3.WriteAtSync(dataToWrite, offsetWrite)
 
 	// 3. Liberamos la espera de los clientes y encolamos la escritura asíncrona a sus páginas
 	for _, j := range batch {
@@ -70,9 +80,7 @@ func (pool *dacV3WorkerWriter) processWriteDisk(batch []*jobWriter, chooseBuffer
 		// NUEVO: Limpiamos la arena de índices para CADA tarea individual de este job
 		for i := range j.task {
 
-			pool.wallBuffersIndex.delBufferArena(j.task[i].idIndexArena)
-
-			pool.WriteUnSafeAsync(&j.task[i])
+			sfDacV3.WriteUnSafeAsync(&j.task[i])
 		}
 
 	}

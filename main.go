@@ -15,7 +15,46 @@ import (
 /media/franky/tiuviweb/go/bin/go get golang.org/x/sys/unix
 /media/franky/tiuviweb/go/bin/go run main.go
 
-APERTURAS
+
+Creacion de indexMaster y gestion del espacio
+
+index master es un mapa de bits donde cada bit respresenta el bloque mas pequeño de la
+configuracion de bloques
+
+Su unica funcion newIndexs crea indices y reserva el tamaño en el mapa de bits
+
+En caso de falta de espacio tambien amplia el tamaño total del archivo.
+
+Escritura en orden:
+	-primero se guardan los indices directos en el disco
+	-Despues se actualiza el mapa de bit y se guarda en el disco
+
+recuperacion
+	-Cada vez que se inicia hay que verificar el mapa de bits y leer en los bloques
+	ocupados.
+
+
+APERTURA DE ARCHIVOS Y GESTION DEL TAMAÑO DEL ARCHIVO
+
+	Apertura de archivo con cap 0
+
+	Abre una pagina minima por ejemplo de tamaño 4096, si el tamaño aumenta
+	entonces se mueve todo el contenido a un tamaño superior por ejemplo 16384
+
+	Esto ocurre hasta llegar al tamaño maximo de pagina de por ejemplo 65536
+
+	Cuando llega al tamaño maximo esa pagina hay que moverla a un indice indexado.
+	En la pagina vez de datos tiene hash que apuntan a indices indexados mas la posicion
+	exacta de la pagina (hash indice indexado + subindice)
+
+	En los indices indexados encontramos los datos
+
+	¿Que es es un indice indexado?
+	significa que en vez de indexar las paginas se indexa el indice y se accede mediante
+	un mapa indice -> id y despues sabiendo la posicion del id en ese indice
+
+
+APERTURAS DE ARCHIVOS POR NOMBRE O POR HASH
 
 Primer caso apertura de pagina
 La ruta se pasa por un hash si existe se abre la pagina si no existe se crea
@@ -47,34 +86,39 @@ ESCRITURAS INDICES
 
 ESCRITURAS DATOS
 
-Primer caso la escritura mas el archivo es superior al tamaño total del archivo
-necesitamos una nueva pagina
 
-	-Primero se escriben los datos en una pagina nueva
+
+Primer caso la escritura escritura en un offset superior al tamaño del archivo , necesitando
+una nueva pagina.
+
+	-Primero se escriben todos los datos en una pagina nueva
+	-se boquea solamente en memoria usando field_IndexKeptInit
 		funcion -> WritePageDirect
 
-	-Segundo se escribe en el indice nuevo
-		funcion -> WriteIndexDirect
 
-	-tercero se borra el indice viejo en el anterior bloque de indices
-		funcion -> WriteIndexDirect
+	2º Se actualizan los dos indices en disco a la vez usando el wall
+		funcion -> WritePageWall
 
 	Recuperacion:
-		En caso de que existan ambos indices el que tenga una secuencia superior gana
-		En caso de que el nuevo indice este corrompido, prevalece el indice viejo con los datos antiguos
+	Si esta escrito en el wal, se vuelven a escribir los indices y se recupera el nuevo archivo,
+	si los indices no se han escrito la pagina se queda desbloqueada pero con datos antiguos que
+	abria que limpiar.
 
 
 
 Segundo caso escritura en un offset superior al tamaño del archivo pero sin ser mas grande que el archivo total
 
-	-Primero se escribe un wal donde consta donde es la escritura offset y un checksum con cr32
+	-Primero se escribe en el wal , la escritura offset y un checksum con cr32
 	-Segundo se escriben los datos directos en el archivo
 		funcion -> WritePageDirect
 
+	-tercero se actualiza el indice con el tamaño del subindice directamente subiendo la secuencia
 
 	Recuperacion:
 		-Si existe el wall se compara los datos que se han editado con el checksum en caso de que no coincida
 		los datos se borran.
+		-Si el indice no se actualiza quedan datos huerfanos que al volver ser escritos se actualizarian
+		-Si no existe el wall se busca los datos con el checksum y si no coincide se borran.
 
 	ADICIONAL:
 		Esta escritura permite archivos de grandes puedan ser escritos directamente los datos sin ser reubicados
@@ -90,21 +134,22 @@ Tercer caso escritura en un offset inferior al tamaño
 		-Si existen los wall se encolan en orden
 
 
-LECTURAS
+LECTURA DE DATOS
 
-Primer caso si la pagina no ha sido abierta
+	Primer caso si la pagina no ha sido abierta
 
-	-Primero se busca el hash
-	-Se pide un bufer
-	-Se sincroniza los datos con el disco
+		-Primero se busca el hash
+		-Se pide un bufer
+		-Se sincroniza los datos con el disco
 
-Segundo caso si la pagina ya ha sido abierta
+	Segundo caso si la pagina ya ha sido abierta
 
-	-Se responde directamente desde el buffer
+		-Se responde directamente desde el buffer
 
-Tercer caso lecturas de archivos grandes
+	Tercer caso lecturas de archivos grandes
 
-	-Se responde con una lectura por rangos directamente desde el disco
+		- por defeninir
+
 
 
 */
@@ -243,37 +288,74 @@ tamaño total
 
 */
 
-// Configuración de tamaños soportados
-var supportedConfigs = []SizeConfig{
-	{Size: 4096, IndexSizeChan: 100, nBuffersAvaibleData: 1024},
-	{Size: 16384, IndexSizeChan: 100, nBuffersAvaibleData: 1024 / 2},
-	{Size: 65536, IndexSizeChan: 100, nBuffersAvaibleData: 1024 / 4},
-}
-
 type DacV3Options struct {
+	sizeIndexMaster        int
 	MaxReserveSize         int64
 	SsdNIopsMili           uint32
-	SsdPageSize            uint32
-	TotalWallBuffer        uint32
-	NBuffersAvailableIndex uint32 // Corregido 'Avaible' a 'Available' para mayor precisión
-	SupportedSizes         []SizeConfig
-	NWorkers               int
-	QueueSize              int
+	NBuffersAvailableIndex uint32
+
+	NChanAvaibleIndexSearch      uint32
+	NBuffersAvailableIndexSearch uint32
+
+	NBuffersAvailableIndexSearchData uint32
+	SupportedSizes                   []SizeConfig
+	NWorkers                         int
+	QueueSize                        int
 }
+
+/*
+const SsdNIopsMili = 2000
+
+const totalWalIndexBuffer = (SsdNIopsMili * BufferAlignSize)
+
+const totalWalDataBuffer = (SsdNIopsMili * 65536)
+
+const totalIndexSumData = (totalWalIndexBuffer + totalWalDataBuffer) * 3
+
+const totalInMb = totalIndexSumData / int64(Megabyte)
+*/
+
+const totalClusterPages = 65536 / 32
+const totalBytesPerClusterPage = 65536 * totalClusterPages
+const totalBytesPerClusterPageMb = totalBytesPerClusterPage / int64(Megabyte)
+
+const totalIndexbytes = Terabyte / (maxSubIndexPerIndex * 4096)
+const totalIndexMb = (totalIndexbytes * BufferAlignSize) / Gigabyte
 
 func main() {
 
 	// Definimos las opciones de forma muy visual y explícita
 	config := DacV3Options{
+		sizeIndexMaster:        4096,              //multiplos de 4096
 		MaxReserveSize:         1024 * 1024 * 100, // 100 MB
-		SsdNIopsMili:           50000,
-		SsdPageSize:            4096,
-		TotalWallBuffer:        256,
+		SsdNIopsMili:           50,
 		NBuffersAvailableIndex: 128,
+
+		NBuffersAvailableIndexSearch:     8,
+		NChanAvaibleIndexSearch:          8,
+
+		NBuffersAvailableIndexSearchData: maxSubIndexPerIndex,
 		SupportedSizes: []SizeConfig{
-			{Size: 4096},
-			{Size: 16384},
-			{Size: 65536},
+			{
+				Size:                4096,
+				IndexSizeChan:       8,
+				nBuffersAvaibleData: maxSubIndexPerIndex * 8,
+			},
+			{
+				Size:                16384,
+				IndexSizeChan:       4,
+				nBuffersAvaibleData: maxSubIndexPerIndex * 4,
+			},
+			{
+				Size:                32768,
+				IndexSizeChan:       2,
+				nBuffersAvaibleData: maxSubIndexPerIndex * 2,
+			},
+			{
+				Size:                65536,
+				IndexSizeChan:       1,
+				nBuffersAvaibleData: maxSubIndexPerIndex,
+			},
 		},
 		NWorkers:  8,
 		QueueSize: 1024,
@@ -283,41 +365,4 @@ func main() {
 	motor := newDacV3(config)
 
 	motor.initDacV3()
-}
-
-type BitMap []byte
-
-func (b BitMap) Set(bitID int) {
-	b[bitID/8] |= 1 << (7 - (bitID % 8))
-}
-
-func (b BitMap) Get(bitID int) bool {
-	return (b[bitID/8] & (1 << (7 - (bitID % 8)))) != 0
-}
-
-func (b BitMap) UnSet(bitID int) {
-	b[bitID/8] &^= 1 << (7 - (bitID % 8))
-}
-
-func (b BitMap) GetBitsOff(n int) (int, bool) {
-	start := -1
-	count := 0
-
-	for i := 0; i < len(b)*8; i++ {
-		if !b.Get(i) {
-			if start == -1 {
-				start = i
-			}
-			count++
-
-			if count == n {
-				return start, true
-			}
-		} else {
-			start = -1
-			count = 0
-		}
-	}
-
-	return 0, false
 }

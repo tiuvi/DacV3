@@ -12,7 +12,10 @@ RECUPERACION
 
 direct no es compatible con Batching
 */
-func (pool *dacV3WorkerWriter) WriteDirect(idDataArena uint32, data []byte, offset int64) error {
+
+func (sfDacV3 *dacV3) WriteDirect(idDataArena uint32, data []byte, offset int64) error {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	tasks := []jobWriterTask{
 		{
@@ -57,7 +60,9 @@ RECUPERACION
     -si es negativo se copia los datos del wal a la pagina original
 */
 
-func (pool *dacV3WorkerWriter) WriteWall(idDataArena uint32, data []byte, offset int64) error {
+func (sfDacV3 *dacV3) WriteWall(idDataArena uint32, data []byte, offset int64) error {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	tasks := []jobWriterTask{
 		{
@@ -71,6 +76,10 @@ func (pool *dacV3WorkerWriter) WriteWall(idDataArena uint32, data []byte, offset
 		direct: false,
 		task:   tasks, // NUEVO: Asignamos el slice de tareas
 		resp:   make(chan error, 1),
+	}
+
+	if idDataArena == 0 {
+		j.task[0].notDelIdDataArena = true
 	}
 
 	select {
@@ -97,8 +106,20 @@ func newWriterTask(idDataArena uint32, data []byte, offset int64) jobWriterTask 
 	}
 }
 
+func newWriterTaskOnce(data []byte, offset int64) jobWriterTask {
+
+	return jobWriterTask{
+		idDataArena:       0,
+		notDelIdDataArena: true,
+		data:              data,
+		offset:            offset,
+	}
+}
+
 // Escritura del wall por lotes
-func (pool *dacV3WorkerWriter) WriteWallBath(tasks []jobWriterTask) error {
+func (sfDacV3 *dacV3) WriteWallBath(tasks []jobWriterTask) error {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	j := &jobWriter{
 		direct: false,
@@ -125,7 +146,9 @@ func (pool *dacV3WorkerWriter) WriteWallBath(tasks []jobWriterTask) error {
 ESCRITURA
 1º - Se escribe directamente los datos en el orgigen, esta funcion es de uso exclusivo interno
 */
-func (pool *dacV3WorkerWriter) WriteUnSafeAsync(jTask *jobWriterTask) {
+func (sfDacV3 *dacV3) WriteUnSafeAsync(jTask *jobWriterTask) {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	j := &jobWriter{
 		directIo: true,
@@ -134,9 +157,6 @@ func (pool *dacV3WorkerWriter) WriteUnSafeAsync(jTask *jobWriterTask) {
 			*jTask,
 		},
 	}
-
-	//Esto se borra al escribir primera vez en el wal
-	j.task[0].idIndexArena = 0
 
 	//EStas variables solo se usan al escribir en el buffer
 	j.task[0].indexOffsetStart = 0
@@ -167,7 +187,9 @@ func (pool *dacV3WorkerWriter) WriteUnSafeAsync(jTask *jobWriterTask) {
 ESCRITURA
 1º - Se escribe directamente los datos en el orgigen, esta funcion es de uso exclusivo interno con respuesta
 */
-func (pool *dacV3WorkerWriter) WriteUnSafeSync(jTask *jobWriterTask) error {
+func (sfDacV3 *dacV3) WriteUnSafeSync(jTask *jobWriterTask) error {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	j := &jobWriter{
 		directIo: true,
@@ -200,7 +222,9 @@ func (pool *dacV3WorkerWriter) WriteUnSafeSync(jTask *jobWriterTask) error {
 	}
 }
 
-func (pool *dacV3WorkerWriter) returnToThePriorityQueue(jobWriterItem *jobWriter) {
+func (sfDacV3 *dacV3) returnToThePriorityQueue(jobWriterItem *jobWriter) {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	pool.jobs <- jobWriterItem
 

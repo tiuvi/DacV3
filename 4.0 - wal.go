@@ -15,7 +15,6 @@ type jobWriterTask struct {
 	idDataArena       uint32
 	data              []byte
 
-	idIndexArena     uint32
 	indexOffsetStart int64
 	indexOffsetEnd   int64
 
@@ -56,55 +55,69 @@ type dacV3WorkerWriter struct {
 
 	//Variables de escritura en el buffer
 	indexReserve     int64
-	walLenIndex      int64
-	wallBuffersIndex *bufferArena
+	walLenIndexBytes int64
 
-	dataReserve     int64
-	totalWallBuffer int
-	wallLenBuffer   int64
-	wallBuffers     [][]byte
+	dataReserve int64
+
+	//Cantidad de bufferes que hay en rotacion
+	numOfBuffersWal int
+	//Tamaño total de un wal buffer
+	walLenTotalBytes int64
+
+	walSumBuffersSize int64
+	walSequence       uint64
+
+	//Son todos los buffers wal escribiendo en rotacion
+	walBuffersTotal [][]byte
 }
 
-func NewWorkerPool(numWorkers int, queueSize int, ssdNIopsMili uint32, wallBuffers [][]byte) *dacV3WorkerWriter {
+func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
+	queueSize int,
+	walSequence uint64,
+	walLenIndexBytes int64,
+	numOfBuffersWal int,
+	walLenTotalBytes int64,
+	walBuffersTotal [][]byte) *dacV3WorkerWriter {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	totalWallBuffer := len(wallBuffers)
-
 	pool := &dacV3WorkerWriter{
-		ctx:        ctx,
-		cancel:     cancel,
-		jobs:       make(chan *jobWriter, queueSize),
-		flushQueue: make(chan *jobWriter, queueSize),
-		queueSize:  queueSize,
+		ctx:             ctx,
+		cancel:          cancel,
+		jobs:            make(chan *jobWriter, queueSize),
+		flushQueue:      make(chan *jobWriter, queueSize),
+		queueSize:       queueSize,
+		numOfBuffersWal: numOfBuffersWal,
+		walSumBuffersSize: int64(numOfBuffersWal) * walLenTotalBytes,
 
-		countJobs: make([]int, totalWallBuffer),
-		//Wallbuffers ya inicializados
-		walLenIndex: int64(ssdNIopsMili * 4096),
+		countJobs:       make([]int, numOfBuffersWal),
 
-		wallBuffersIndex: newBufferArena(ssdNIopsMili*uint32(totalWallBuffer), 4096),
-		totalWallBuffer:  totalWallBuffer,
+		//walBuffersTotal ya inicializados
+		walLenIndexBytes: walLenIndexBytes,
 
-		wallLenBuffer: int64(len(wallBuffers[0])),
-		wallBuffers:   wallBuffers,
+		walLenTotalBytes: walLenTotalBytes,
+		walBuffersTotal:  walBuffersTotal,
 	}
 
-	pool.dataReserve = pool.walLenIndex
+	pool.indexReserve = int64(BufferAlignSize)
+	pool.dataReserve = pool.walLenIndexBytes
 
 	// Arrancamos workers
 	for i := 0; i < numWorkers; i++ {
 		pool.wg.Add(1)
-		go pool.worker()
+		go sfDacV3.worker()
 	}
 
 	// Arrancamos flusher
 	pool.flusherWg.Add(1)
-	go pool.flusher()
+	go sfDacV3.flusher()
 
 	return pool
 }
 
-func (pool *dacV3WorkerWriter) Stop() {
+func (sfDacV3 *dacV3) Stop() {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	close(pool.jobs)       // 1. Decimos a los workers que no hay más trabajos
 	pool.wg.Wait()         // 2. Esperamos a que los workers terminen de encolar
@@ -115,7 +128,9 @@ func (pool *dacV3WorkerWriter) Stop() {
 
 var ErrServerBusy = errors.New("servidor saturado")
 
-func (pool *dacV3WorkerWriter) worker() {
+func (sfDacV3 *dacV3) worker() {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	defer pool.wg.Done()
 
@@ -145,14 +160,14 @@ func (pool *dacV3WorkerWriter) worker() {
 
 				j.wg.Done()
 
-				pool.returnToThePriorityQueue(j)
+				sfDacV3.returnToThePriorityQueue(j)
 
 				continue
 			}
 
 			pool.mu.Unlock()
 
-			pool.processWriteUnSafe(j)
+			sfDacV3.processWriteUnSafe(j)
 
 			j.wg.Done()
 
@@ -170,7 +185,7 @@ func (pool *dacV3WorkerWriter) worker() {
 				totalIndexLen += int64(BufferAlignSize)
 			}
 
-			if totalIndexLen+pool.indexReserve > pool.walLenIndex {
+			if totalIndexLen+pool.indexReserve > pool.walLenIndexBytes {
 
 				pool.mu.Unlock()
 
@@ -243,7 +258,7 @@ func (pool *dacV3WorkerWriter) worker() {
 
 		j.bufIdx = pool.chooseBuffer
 
-		lenWriteBuffer := int64(len(pool.wallBuffers[j.bufIdx]))
+		lenWriteBuffer := int64(len(pool.walBuffersTotal[j.bufIdx]))
 
 		// 1. Calculamos el tamaño TOTAL de los datos de todo el lote
 		var totalDataLen int64
@@ -254,7 +269,7 @@ func (pool *dacV3WorkerWriter) worker() {
 		}
 
 		//2 validamos los indices
-		if totalIndexLen+pool.indexReserve > pool.walLenIndex {
+		if totalIndexLen+pool.indexReserve > pool.walLenIndexBytes {
 
 			pool.mu.Unlock()
 
@@ -346,14 +361,16 @@ func (pool *dacV3WorkerWriter) worker() {
 	}
 }
 
-func (pool *dacV3WorkerWriter) flusher() {
+func (sfDacV3 *dacV3) flusher() {
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	defer pool.flusherWg.Done()
 
-	// Inicializamos las estructuras dinámicamente según pool.totalWallBuffer
-	batch := make([][]*jobWriter, pool.totalWallBuffer)
+	// Inicializamos las estructuras dinámicamente según pool.numOfBuffersWal
+	batch := make([][]*jobWriter, pool.numOfBuffersWal)
 
-	for i := 0; i < pool.totalWallBuffer; i++ {
+	for i := 0; i < pool.numOfBuffersWal; i++ {
 		batch[i] = make([]*jobWriter, 0, pool.queueSize)
 	}
 
@@ -364,11 +381,11 @@ func (pool *dacV3WorkerWriter) flusher() {
 		bufferAEnviarDisco := pool.chooseBuffer
 
 		// --- ROTACIÓN CIRCULAR (Ring Buffer) ---
-		pool.chooseBuffer = (pool.chooseBuffer + 1) % pool.totalWallBuffer
+		pool.chooseBuffer = (pool.chooseBuffer + 1) % pool.numOfBuffersWal
 
 		//Los datos siempre empiezan a continuacion del indice
-		pool.indexReserve = 0
-		pool.dataReserve = pool.walLenIndex
+		pool.indexReserve = int64(BufferAlignSize)
+		pool.dataReserve = pool.walLenIndexBytes
 
 		// 2. CLASIFICAR el trabajo 'j' que acaba de llegar
 		if j.bufIdx == bufferAEnviarDisco {
@@ -417,11 +434,11 @@ func (pool *dacV3WorkerWriter) flusher() {
 			}
 
 			// 8. Mandar a disco
-			pool.processWriteDisk(batch[bufferAEnviarDisco], bufferAEnviarDisco)
+			sfDacV3.processWriteDisk(batch[bufferAEnviarDisco], bufferAEnviarDisco)
 
 			// Reseteamos el buffer
-			for i := range pool.wallBuffers[bufferAEnviarDisco] {
-				pool.wallBuffers[bufferAEnviarDisco][i] = 0
+			for i := range pool.walBuffersTotal[bufferAEnviarDisco] {
+				pool.walBuffersTotal[bufferAEnviarDisco][i] = 0
 			}
 
 			// Vaciamos el batch conservando la capacidad
@@ -432,7 +449,7 @@ func (pool *dacV3WorkerWriter) flusher() {
 
 	// FINAL FLUSH trabajos que no se pudieron encolar se pierden
 	//No arriegar el actual wallbuffer
-	for i := 0; i < pool.totalWallBuffer; i++ {
+	for i := 0; i < pool.numOfBuffersWal; i++ {
 
 		if len(batch[i]) > 0 {
 

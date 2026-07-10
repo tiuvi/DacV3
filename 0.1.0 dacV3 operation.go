@@ -2,13 +2,15 @@ package dacV3
 
 import (
 	"errors"
+	"log"
+	"os"
 
 	"golang.org/x/sys/unix"
 )
 
-func (sf *dacV3) WriteAtSync(data []byte, offset int64) {
+func (sfDacV3 *dacV3) WriteAtSync(data []byte, offset int64) {
 
-	_, err := globalDacV3.file.WriteAt(data, offset)
+	_, err := sfDacV3.file.WriteAt(data, offset)
 	if err != nil {
 
 		println("ERROR FATAL - WriteAtSync - WriteAt : ", err.Error())
@@ -16,7 +18,7 @@ func (sf *dacV3) WriteAtSync(data []byte, offset int64) {
 		return
 	}
 
-	err = unix.Fdatasync(int(globalDacV3.fd))
+	err = unix.Fdatasync(int(sfDacV3.fd))
 	if err != nil {
 
 		println("ERROR FATAL - WriteAtSync - Fdatasync : ", err.Error())
@@ -39,9 +41,9 @@ func (sfDacV3 *dacV3) ReadAt(data []byte, offset int64) {
 	return
 }
 
-func (sf *dacV3) WriteAt(data []byte, offset int64) {
+func (sfDacV3 *dacV3) WriteAt(data []byte, offset int64) {
 
-	_, err := globalDacV3.file.WriteAt(data, offset)
+	_, err := sfDacV3.file.WriteAt(data, offset)
 	if err != nil {
 
 		println("ERROR FATAL - WriteAt: ", err.Error())
@@ -51,19 +53,11 @@ func (sf *dacV3) WriteAt(data []byte, offset int64) {
 
 }
 
-func (sf *dacV3) ExpandSize(newSize int64) error {
+func (sf *dacV3) ExpandSize(newSize int64) {
 
 	// Fast path sin bloquear (Lock-Free)
 	if newSize <= sf.len.Load() {
-		return nil
-	}
-
-	sf.mu.Lock()
-	defer sf.mu.Unlock()
-
-	// Doble comprobación tras adquirir el Lock
-	if newSize <= sf.len.Load() {
-		return nil
+		return
 	}
 
 	// mode = 0 (Sin KEEP_SIZE) para evitar actualizaciones de inodo en las escrituras posteriores
@@ -71,16 +65,45 @@ func (sf *dacV3) ExpandSize(newSize int64) error {
 
 		// Fallback si no está soportado (particiones antiguas)
 		if !errors.Is(err, unix.EOPNOTSUPP) && !errors.Is(err, unix.ENOTSUP) {
-			return err
+			log.Fatalln("ERROR ExpandSize: ", err.Error())
+			return
 		}
 
 		if err := unix.Ftruncate(sf.fd, newSize); err != nil {
-			return err
+			log.Fatalln("ERROR ExpandSize: ", err.Error())
+			return
 		}
 	}
 
 	// Actualización atómica para que los demás workers pasen por el Fast Path
 	sf.len.Store(newSize)
 
-	return nil
+	return
+}
+
+func openFileDacV3() *dacV3 {
+
+	fd, err := unix.Open("/media/franky/tiuviweb/test/4 - dacV3/files", unix.O_RDWR|unix.O_CREAT|unix.O_DIRECT, 0666)
+	if err != nil {
+		// Manejar el error de forma oportuna
+		log.Fatalf("Error al abrir el archivo: %v", err)
+	}
+
+	// Convertimos fd (int) a uintptr de manera explícita
+	dacV3Fd := os.NewFile(uintptr(fd), "dacv3")
+
+	size, err := dacV3Fd.Seek(0, 2)
+	if err != nil {
+		// Manejar el error de forma oportuna
+		log.Fatalf("Error al abrir el archivo: %v", err)
+	}
+
+	sfDacV3 := &dacV3{
+		file: dacV3Fd,
+		fd:   fd,
+	}
+
+	sfDacV3.len.Store(size)
+
+	return sfDacV3
 }

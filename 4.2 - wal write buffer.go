@@ -130,7 +130,7 @@ func GetOffsetWalData(index []byte) (int64, int64, error) {
 
 func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 
-	wallBuffers := pool.wallBuffers[j.bufIdx]
+	walBuffersTotal := pool.walBuffersTotal[j.bufIdx]
 
 	//Direct escribe solamente un checksum con los datos
 	if j.direct {
@@ -138,25 +138,18 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 		// Iteramos sobre cada tarea del lote usando el índice 'i'
 		for i := range j.task {
 
-			// 1. Obtenemos un arena y un buffer de índice para ESTA tarea en concreto
-			idArena, indexBuf := pool.wallBuffersIndex.addBufferArena()
+			indexView := walBuffersTotal[j.task[i].indexOffsetStart:j.task[i].indexOffsetEnd]
 
-			// 2. Guardamos el ID en la tarea individual
-			j.task[i].idIndexArena = idArena
+			// 2. Escribimos los metadatos DIRECTAMENTE en el buffer global usando la vista
+			SetTypeIndexWall(WallDirectType, indexView)
 
-			// 3. Escribimos los metadatos en el índice temporal (indexBuf)
-			SetTypeIndexWall(WallDirectType, indexBuf)
-
-			SetCheckSum(indexBuf, j.task[i].data)
+			SetCheckSum(indexView, j.task[i].data)
 
 			offsetStart := j.task[i].offset
-
 			offsetEnd := offsetStart + int64(len(j.task[i].data))
 
-			SetOffsetData(offsetStart, offsetEnd, indexBuf)
+			SetOffsetData(offsetStart, offsetEnd, indexView)
 
-			// 4. Copiamos este índice temporal a la zona del buffer global asignada a esta tarea
-			copy(wallBuffers[j.task[i].indexOffsetStart:j.task[i].indexOffsetEnd], indexBuf)
 		}
 
 		return
@@ -166,30 +159,27 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 	// Iteramos sobre cada tarea del lote usando el índice 'i'
 	for i := range j.task {
 
-		// 1. Obtenemos un arena y un buffer de índice para ESTA tarea
-		idArena, indexBuf := pool.wallBuffersIndex.addBufferArena()
+		t := &j.task[i] // Usamos un puntero para limpiar la sintaxis
 
-		// 2. Guardamos el ID en la tarea individual
-		j.task[i].idIndexArena = idArena
+		// 1. Creamos la vista directa para el ÍNDICE (metadatos) en el buffer global
+		indexView := walBuffersTotal[t.indexOffsetStart:t.indexOffsetEnd]
 
-		// 3. Escribimos los metadatos en el índice temporal (indexBuf)
-		SetTypeIndexWall(WallModifyType, indexBuf)
+		// 2. Escribimos los metadatos DIRECTAMENTE en la vista global (Zero-Copy para el índice)
+		SetTypeIndexWall(WallModifyType, indexView)
+		SetCheckSum(indexView, t.data)
 
-		SetCheckSum(indexBuf, j.task[i].data)
+		// 3. Calculamos y guardamos los offsets de la página original en el índice
+		offsetStart := t.offset
+		offsetEnd := offsetStart + int64(len(t.data))
+		SetOffsetData(offsetStart, offsetEnd, indexView)
 
-		// 4. Calculamos y guardamos los offsets de la página original
-		offsetStart := j.task[i].offset
-		offsetEnd := offsetStart + int64(len(j.task[i].data))
-		SetOffsetData(offsetStart, offsetEnd, indexBuf)
+		// 4. Guardamos en el índice en qué parte del WAL están los datos reales
+		SetOffsetWalData(t.dataOffsetStart, t.dataOffsetEnd, indexView)
 
-		// 5. Guardamos en el índice en qué parte del WAL están los datos reales
-		SetOffsetWalData(j.task[i].dataOffsetStart, j.task[i].dataOffsetEnd, indexBuf)
+		// 5. Copiamos los DATOS REALES de la tarea a su zona en el buffer global
+		// (Esta copia es necesaria y ya está optimizada, va directa al destino final)
+		copy(walBuffersTotal[t.dataOffsetStart:t.dataOffsetEnd], t.data)
 
-		// 6. Copiamos este índice temporal a su zona reservada en el buffer global
-		copy(wallBuffers[j.task[i].indexOffsetStart:j.task[i].indexOffsetEnd], indexBuf)
-
-		// 7. Finalmente, copiamos los DATOS REALES de la tarea a su zona reservada en el buffer
-		copy(wallBuffers[j.task[i].dataOffsetStart:j.task[i].dataOffsetEnd], j.task[i].data)
 	}
 
 	return

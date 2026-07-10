@@ -16,7 +16,7 @@ type Chunk[T any] struct {
 type PagedPool[T any] struct {
 	globalLock sync.RWMutex
 	chunks     []*Chunk[T]
-	nextID     atomic.Int64
+	nextID     atomic.Uint32
 }
 
 // NewPagedPool Constructor genérico
@@ -36,7 +36,7 @@ func NewPagedPool[T any]() *PagedPool[T] {
 }
 
 // New obtiene un nuevo espacio en el pool
-func (p *PagedPool[T]) New() (position int64, itemPoint *T) {
+func (p *PagedPool[T]) New() (position uint32, itemPoint *T) {
 	// 1. Obtenemos el ID atómicamente. Si empezó en 0, el primero será 1.
 	id := p.nextID.Add(1)
 
@@ -67,7 +67,7 @@ func (p *PagedPool[T]) New() (position int64, itemPoint *T) {
 }
 
 // Get devuelve el puntero al elemento genérico
-func (p *PagedPool[T]) Get(id int64) *T {
+func (p *PagedPool[T]) Get(id uint32) *T {
 	// CONSEJO 2: Protegemos contra la petición del ID 0 (reservado/inválido) o números negativos.
 	if id <= 0 {
 		return nil

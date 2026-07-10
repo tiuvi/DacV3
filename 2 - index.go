@@ -5,43 +5,44 @@ import (
 	"sync"
 )
 
-const minSizeIndexWithPage = 4096*maxSubIndexPerIndex /* subindices * bloques */ + 4096 //indice
-
+//Indice principal
 const (
 
 	// Checksum
 	field_IndexCheckSumInit = 0
-	field_IndexCheckSumEnd  = 4
+	field_IndexCheckSumEnd  = field_IndexCheckSumInit + 4
 
 	// Secuencia
-	field_IndexSequenceInit = 4
-	field_IndexSequenceEnd  = 12
+	field_IndexSequenceInit = field_IndexCheckSumEnd
+	field_IndexSequenceEnd  = field_IndexSequenceInit + 8
 
 	// Tamaño de paginación
-	field_IndexSizePaginationInit = 12
-	field_IndexSizePaginationEnd  = 16
-
-	// numero de elementos del subíndice
-	field_IndexLenSubIndexInit = 16
-	field_IndexLenSubIndexEnd  = 20
+	field_IndexSizePaginationInit = field_IndexSequenceEnd
+	field_IndexSizePaginationEnd  = field_IndexSizePaginationInit + 4
 
 	// Subíndices activos / Kept
-	field_IndexKeptInit = 20
-	field_IndexKeptEnd  = 20 + maxSubIndexPerIndex
+	field_IndexKeptInit = field_IndexSizePaginationEnd
+	field_IndexKeptEnd  = field_IndexKeptInit + maxSubIndexPerIndex
 
+	//Añadir este indice a la busqueda
 	field_HashSearchInit = field_IndexKeptEnd
 	field_HashSearchEnd  = field_HashSearchInit + 32
 )
+
+// maximo de subindices por indice 4096
+const maxSubIndexPerIndex = 98
+
+const freeSizeInIndex = BufferAlignSize - sizeTotalIndex
 
 // subindices tamaño
 const (
 
 	// Posiciones relativas dentro de un único subíndice
-	subIndex_Hash_Init = 0
-	subIndex_Hash_End  = 32
+	subIndex_Hash_Init       = 0
+	subIndex_Hash_End        = subIndex_Hash_Init + 32
 
-	subIndex_Size_Init = 32
-	subIndex_Size_End  = 40
+	subIndex_Size_Init       = subIndex_Hash_End
+	subIndex_Size_End        = subIndex_Size_Init + 8
 )
 
 // Nuevo pagina para analiticas
@@ -67,16 +68,26 @@ const sizeSubIndexInBlock = sizeSubIndex * maxSubIndexPerIndex
 // Sin usar sizeTotalIndex
 const sizeTotalIndex = sizeSubIndexInBlock + field_HashSearchEnd
 
+
 // Calculo del indice + el numero de subindices por el tamaño de cada indice
 const totalIndexAndSubIndex = BufferAlignSize - sizeTotalIndex
 
 // Dejamos padding para los indices empezando los subindex posterior.
 const field_subIndexInit = BufferAlignSize - sizeSubIndexInBlock
 
-// Indice
+// Indice en array necesita su offset para poder eliminar el buffer y volver abrir el buffer cuando se use
 type Index struct {
 	//Bloqueo de mutex
 	mu sync.Mutex
+	//Localizacion del indice en el sistema de archivos
+	offset int64
+	//Array donde esta el buffer
+	idLocationBuffer uint32
+}
+/*
+No necesita mutex ya que depende de otra pagina padre
+*/
+type IndexSearch struct {
 	//Localizacion del indice en el sistema de archivos
 	offset int64
 	//Array donde esta el buffer

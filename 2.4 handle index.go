@@ -4,47 +4,8 @@ import (
 	"errors"
 )
 
-/*
-secuencia
-paginacion
-items
-hash
-*/
-func (sfDacV3 *dacV3) newIndex(offset int64, sizePagination uint32) (err error) {
 
-	idIndex, index := sfDacV3.indexLocation.New()
 
-	index.mu.Lock()
-	defer index.mu.Unlock()
-
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
-
-	bufIndex := indexBuffer(buf)
-
-	bufIndex.SetSizePagination(sizePagination)
-
-	bufIndex.SetSequence(1)
-
-	bufIndex.SetCheckSum()
-
-	index.idLocationBuffer = idBuffer
-
-	index.offset = offset
-
-	_, err = sfDacV3.file.WriteAt(buf[0:4096], offset)
-	if err != nil {
-		return err
-	}
-
-	indexChan, exists := sfDacV3.indexPools[sizePagination]
-	if !exists {
-		return errors.New("Ese tamaño de indice no existe")
-	}
-
-	indexChan <- idIndex
-
-	return
-}
 
 // ESta funcion actua dentro de un bloqueo
 func (sfDacV3 *dacV3) updateIndex(index *Index) (err error) {
@@ -84,7 +45,7 @@ func (sfDacV3 *dacV3) InitIndexPage(offset int64) (index *Index, err error) {
 
 	index.idLocationBuffer = idBuffer
 
-	index.idLocationIndex = idIndex
+	index.offset = offset
 
 	sfDacV3.ReadAt(buf, offset)
 	if err != nil {
@@ -118,6 +79,9 @@ func (sfDacV3 *dacV3) InitIndexPage(offset int64) (index *Index, err error) {
 		return index, nil
 	}
 
+	//Abrir las paginas de indice
+
+	
 	return nil, nil
 }
 

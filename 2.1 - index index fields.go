@@ -3,7 +3,7 @@ package dacV3
 import (
 	"encoding/binary"
 	"hash/crc32"
-	"math"
+
 )
 
 func (b indexBuffer) CalCheckSum() uint32 {
@@ -25,6 +25,7 @@ func (b indexBuffer) GetCheckSum() uint32 {
 	return binary.BigEndian.Uint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd])
 }
 
+
 // SetSequence asigna la secuencia (8 bytes) en la posición correspondiente
 func (b indexBuffer) SetSequence(seq int64) {
 	binary.BigEndian.PutUint64(b[field_IndexSequenceInit:field_IndexSequenceEnd], uint64(seq))
@@ -44,23 +45,7 @@ func (b indexBuffer) GetSizePagination() uint32 {
 	return binary.BigEndian.Uint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
 }
 
-func (b indexBuffer) SetLenSubIndex(size int64) {
 
-	if size < 0 || size > math.MaxUint32 {
-		panic("LenSubIndex fuera de rango para uint32")
-	}
-
-	binary.BigEndian.PutUint32(
-		b[field_IndexLenSubIndexInit:field_IndexLenSubIndexEnd],
-		uint32(size),
-	)
-}
-
-func (b indexBuffer) GetLenSubIndex() int64 {
-	return int64(binary.BigEndian.Uint32(
-		b[field_IndexLenSubIndexInit:field_IndexLenSubIndexEnd],
-	))
-}
 
 func (b indexBuffer) SetIndexKept(id int) {
 
@@ -115,6 +100,13 @@ func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
 	return -1, false
 }
 
+func (b indexBuffer) GetHashSearch() [32]byte{
+
+	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
+
+	return [32]byte(bufferActive)
+}
+
 func (b indexBuffer) SetHashSearch() [32]byte {
 
 	hash := NewUUIDBytes()
@@ -126,7 +118,7 @@ func (b indexBuffer) SetHashSearch() [32]byte {
 	return hash
 }
 
-func (b indexBuffer) UnSetHashSearch(id int) {
+func (b indexBuffer) UnSetHashSearch() {
 
 	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
 	clear(bufferActive)
@@ -134,6 +126,6 @@ func (b indexBuffer) UnSetHashSearch(id int) {
 }
 
 // GetMetadata devuelve todos los campos directamente usando tus funciones Get existentes
-func (b indexBuffer) GetMetadata() (sizePagination uint32, sequence int64, hash uint32) {
-	return b.GetSizePagination(), b.GetSequence(), b.GetCheckSum()
+func (b indexBuffer) GetMetadata() (checkSum uint32, sizePagination uint32, sequence int64, hash [32]byte) {
+	return  b.GetCheckSum() ,b.GetSizePagination(), b.GetSequence(), b.GetHashSearch()
 }

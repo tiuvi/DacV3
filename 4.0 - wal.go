@@ -77,20 +77,20 @@ func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
 	walLenIndexBytes int64,
 	numOfBuffersWal int,
 	walLenTotalBytes int64,
-	walBuffersTotal [][]byte) *dacV3WorkerWriter {
+	walBuffersTotal [][]byte) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	pool := &dacV3WorkerWriter{
-		ctx:             ctx,
-		cancel:          cancel,
-		jobs:            make(chan *jobWriter, queueSize),
-		flushQueue:      make(chan *jobWriter, queueSize),
-		queueSize:       queueSize,
-		numOfBuffersWal: numOfBuffersWal,
+	sfDacV3.dacV3WorkerWriter = &dacV3WorkerWriter{
+		ctx:               ctx,
+		cancel:            cancel,
+		jobs:              make(chan *jobWriter, queueSize),
+		flushQueue:        make(chan *jobWriter, queueSize),
+		queueSize:         queueSize,
+		numOfBuffersWal:   numOfBuffersWal,
 		walSumBuffersSize: int64(numOfBuffersWal) * walLenTotalBytes,
 
-		countJobs:       make([]int, numOfBuffersWal),
+		countJobs: make([]int, numOfBuffersWal),
 
 		//walBuffersTotal ya inicializados
 		walLenIndexBytes: walLenIndexBytes,
@@ -98,6 +98,8 @@ func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
 		walLenTotalBytes: walLenTotalBytes,
 		walBuffersTotal:  walBuffersTotal,
 	}
+
+	pool := sfDacV3.dacV3WorkerWriter
 
 	pool.indexReserve = int64(BufferAlignSize)
 	pool.dataReserve = pool.walLenIndexBytes
@@ -112,7 +114,7 @@ func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
 	pool.flusherWg.Add(1)
 	go sfDacV3.flusher()
 
-	return pool
+	return
 }
 
 func (sfDacV3 *dacV3) Stop() {

@@ -12,33 +12,63 @@ const (
 )
 
 //TOTAL DE BLOQUES QUE PUEDE ALMACENAR EL ARCHIVO 12 gb
-//const totalIndexBlocks = ((sizeIndexMaster * 8) * (98 * BufferAlignSize)) / Gigabyte
+//const totalIndexBlocks = ((SizeIndexMaster * 8) * (98 * BufferAlignSize)) / Gigabyte
 
 func calcIndexMasterStaticSize(sfDacV3 *dacV3) {
 
 	// 1. PRIMERO: Calcular las matemáticas (Obligatorio aunque el archivo sea nuevo)
 	sfDacV3.indexMaster.idIndexPhysicalSizePerByte = sfDacV3.indexMaster.blockMinSize.sizeBlock * 8
 
-	dataPhysicalSize := sfDacV3.indexMaster.idIndexPhysicalSizePerByte * int64(sfDacV3.opts.sizeIndexMaster)
+	dataPhysicalSize := sfDacV3.indexMaster.idIndexPhysicalSizePerByte * int64(sfDacV3.opts.SizeIndexMaster)
 
-	sfDacV3.indexMaster.segmentPhysicalSize = int64(sfDacV3.opts.sizeIndexMaster) + dataPhysicalSize
+	sfDacV3.indexMaster.segmentPhysicalSize = int64(sfDacV3.opts.SizeIndexMaster) + dataPhysicalSize
 
 	return
 }
 
-func initIndexMasterBuffers(sfDacV3 *dacV3) (needReadDisk bool) {
+func readIndexMaster(sfDacV3 *dacV3) {
+
+	if sfDacV3.len.Load() > 0 {
+
+		walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
+
+		// 6. Leemos cada mapa de bits desde el disco
+		for i := 0; i < len(sfDacV3.indexMaster.globalSize); i++ {
+
+			//este seria el primer bloque de indice
+			physicalOffset := walSumBuffersSize + (int64(i) * sfDacV3.indexMaster.segmentPhysicalSize)
+
+			// Asignamos memoria alineada para leer el bloque con O_DIRECT
+			newBuffer := MakeAlignedBlock(sfDacV3.opts.SizeIndexMaster)
+
+			// Leemos directamente del disco al buffer alineado
+			sfDacV3.ReadAt(newBuffer, physicalOffset)
+
+			// Almacenamos el bloque en nuestra estructura en memoria RAM
+			sfDacV3.indexMaster.globalSize[i] = newBuffer
+		}
+
+	}
+	return
+}
+
+func initIndexMasterBuffers(sfDacV3 *dacV3) {
+
+
+	sfDacV3.indexMaster.walSumBuffersSize = sfDacV3.dacV3WorkerWriter.walSumBuffersSize
 
 	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
 
 	fileSize := sfDacV3.len.Load()
 	if fileSize == 0 {
-		// Ahora sfDacV3.indexMaster.segmentPhysicalSize SÍ tiene un valor mayor a 0
-		sfDacV3.ExpandSize(walSumBuffersSize + sfDacV3.indexMaster.segmentPhysicalSize)
 
-		newBuffer := MakeAlignedBlock(sfDacV3.opts.sizeIndexMaster)
+		// Expandimos al tamaño minimo de wal + indexmaster
+		sfDacV3.ExpandSize(walSumBuffersSize + int64(sfDacV3.opts.SizeIndexMaster))
+
+		newBuffer := MakeAlignedBlock(sfDacV3.opts.SizeIndexMaster)
 
 		sfDacV3.indexMaster.globalSize = [][]byte{newBuffer}
-		return false
+		return
 	}
 
 	// 4. Calculamos cuántos segmentos (mapas de bits) hay en el archivo actual.
@@ -54,27 +84,8 @@ func initIndexMasterBuffers(sfDacV3 *dacV3) (needReadDisk bool) {
 	// 5. Inicializamos el slice multidimensional para albergar exactamente los mapas necesarios
 	sfDacV3.indexMaster.globalSize = make([][]byte, numSegments)
 
-	return true
-}
-
-func readIndexMaster(sfDacV3 *dacV3) {
-
-	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
-
-	// 6. Leemos cada mapa de bits desde el disco
-	for i := 0; i < len(sfDacV3.indexMaster.globalSize); i++ {
-
-		//este seria el primer bloque de indice
-		physicalOffset := walSumBuffersSize + (int64(i) * sfDacV3.indexMaster.segmentPhysicalSize)
-
-		// Asignamos memoria alineada para leer el bloque con O_DIRECT
-		newBuffer := MakeAlignedBlock(sfDacV3.opts.sizeIndexMaster)
-
-		// Leemos directamente del disco al buffer alineado
-		sfDacV3.ReadAt(newBuffer, physicalOffset)
-
-		// Almacenamos el bloque en nuestra estructura en memoria RAM
-		sfDacV3.indexMaster.globalSize[i] = newBuffer
+	if sfDacV3.len.Load() > 0 {
+		readIndexMaster(sfDacV3)
 	}
 
 	return
@@ -87,8 +98,6 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 	sfDacV3.indexMaster = &indexMaster
 
 	sfDacV3.indexMaster.opts = sfDacV3.opts
-
-	sfDacV3.indexMaster.walSumBuffersSize = sfDacV3.dacV3WorkerWriter.walSumBuffersSize
 
 	sfDacV3.indexMaster.sizeSubIndex = make(map[uint32]configIndex)
 
@@ -125,9 +134,5 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 	sfDacV3.indexMaster.maxMinRelationBlock = int(sfDacV3.indexMaster.blockMaxSize.pageSize / sfDacV3.indexMaster.blockMinSize.pageSize)
 
 	calcIndexMasterStaticSize(sfDacV3)
-
-	if initIndexMasterBuffers(sfDacV3) {
-		readIndexMaster(sfDacV3)
-	}
 
 }

@@ -1,16 +1,4 @@
-package dacV3
 
-import (
-	"errors"
-	"sync/atomic"
-)
-
-/*
-/media/franky/tiuviweb/go/bin/go mod tidy
-
-/media/franky/tiuviweb/go/bin/go build -o dacV3Run main.go
-chmod +x dacV3Run
-./dacV3Run
 
 /media/franky/tiuviweb/go/bin/go run main.go
 
@@ -289,20 +277,6 @@ sudo umount /mnt/ramdisk
 
 */
 
-type WalZeroCopy struct {
-	id       uint64
-	offset   uint64
-	size     uint64
-	sequence atomic.Uint64
-}
-
-type WalAppend struct {
-	id       uint64
-	offset   uint64
-	size     uint64
-	sequence atomic.Uint64
-}
-
 /*
 4096 * 51 208896
 
@@ -312,14 +286,6 @@ type WalAppend struct {
 262144
 1048576
 */
-
-var errNoMoreIndex = errors.New("no hay mas indices")
-
-func (sfDacV3 *dacV3) initDacV3() {
-
-}
-
-var dacV3File *dacV3
 
 /*
 Optimizar a partir de datos de entrada como
@@ -340,85 +306,3 @@ tamaño total
 1081088
 
 
-*/
-
-type DacV3Options struct {
-	dacRoute string
-	sizeIndexMaster        int
-	MaxReserveSize         int64
-	SsdNIopsMili           uint32
-	NBuffersAvailableIndex uint32
-
-	NChanAvaibleIndexSearch      uint32
-	NBuffersAvailableIndexSearch uint32
-
-	NBuffersAvailableIndexSearchData uint32
-	SupportedSizes                   []SizeConfig
-	NWorkers                         int
-	QueueSize                        int
-}
-
-/*
-const SsdNIopsMili = 2000
-
-const totalWalIndexBuffer = (SsdNIopsMili * BufferAlignSize)
-
-const totalWalDataBuffer = (SsdNIopsMili * 65536)
-
-const totalIndexSumData = (totalWalIndexBuffer + totalWalDataBuffer) * 3
-
-const totalInMb = totalIndexSumData / int64(Megabyte)
-*/
-
-const totalClusterPages = 65536 / 32
-const totalBytesPerClusterPage = 65536 * totalClusterPages
-const totalBytesPerClusterPageMb = totalBytesPerClusterPage / int64(Megabyte)
-
-const totalIndexbytes = Terabyte / (maxSubIndexPerIndex * 4096)
-const totalIndexMb = (totalIndexbytes * BufferAlignSize) / Gigabyte
-
-func main() {
-
-	// Definimos las opciones de forma muy visual y explícita
-	config := DacV3Options{
-		dacRoute:"/mnt/ramdisk",
-		sizeIndexMaster: 4096,              //multiplos de 4096
-		MaxReserveSize:  1024 * 1024 * 100, // 100 MB
-		SsdNIopsMili:    50,
-
-		NBuffersAvailableIndexSearch:     8,
-		NChanAvaibleIndexSearch:          8,
-		NBuffersAvailableIndexSearchData: maxSubIndexPerIndex * 8,
-
-		NBuffersAvailableIndex: 23,
-		SupportedSizes: []SizeConfig{
-			{
-				Size:                4096,
-				IndexSizeChan:       16,
-				nBuffersAvaibleData: maxSubIndexPerIndex * 16,
-			},
-			{
-				Size:                16384,
-				IndexSizeChan:       4,
-				nBuffersAvaibleData: maxSubIndexPerIndex * 4,
-			},
-			{
-				Size:                32768,
-				IndexSizeChan:       2,
-				nBuffersAvaibleData: maxSubIndexPerIndex * 2,
-			},
-			{
-				Size:                65536,
-				IndexSizeChan:       1,
-				nBuffersAvaibleData: maxSubIndexPerIndex,
-			},
-		},
-		NWorkers:  8,
-		QueueSize: 1024,
-	}
-
-	// Creamos la instancia pasando las opciones
-	motor := newDacV3(config)
-
-	motor.initDacV3()
-}

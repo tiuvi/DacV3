@@ -29,7 +29,7 @@ func (b indexBuffer) newSubIndex(hash [32]byte) (id int, found bool) {
 // Funciones para subindices
 func (b indexBuffer) setSubIndex(hash [32]byte, id int) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return
 	}
@@ -49,7 +49,7 @@ func (b indexBuffer) setSubIndex(hash [32]byte, id int) {
 
 func (b indexBuffer) unSetSubIndex(id int) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return
 	}
@@ -69,7 +69,7 @@ func (b indexBuffer) unSetSubIndex(id int) {
 
 func (b indexBuffer) GetSubIndexHash(id int) [32]byte {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -88,7 +88,7 @@ var errSubIndexNameNotZero = errors.New("tamaño minimo del nombre no puede ser 
 
 func (b indexBuffer) SetSubIndexSize(id int, size int64) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -100,7 +100,7 @@ func (b indexBuffer) SetSubIndexSize(id int, size int64) {
 }
 
 func (b indexBuffer) GetSubIndexSize(id int) int64 {
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -114,7 +114,7 @@ func (b indexBuffer) GetSubIndexSize(id int) int64 {
 
 func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido: Sequence y el parámetro
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -124,13 +124,13 @@ func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido:
 	// Corregido: Actualizado el comentario para que tenga sentido
 	// La Secuencia ocupa los bytes correspondientes relativos a este subíndice
 	binary.BigEndian.PutUint64(
-        zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End], 
-        uint64(sequence),
-    )
+		zoneSubIndex[offsetIndex+subIndexSequence_Init:offsetIndex+subIndexSequence_End],
+		uint64(sequence),
+	)
 }
 
 func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -139,14 +139,14 @@ func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
 
 	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
 	val := binary.BigEndian.Uint64(
-        zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End],
-    )
+		zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End],
+	)
 	return int64(val)
 }
 
 func (b indexBuffer) SetSubIndexName(id int, name string) error {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -178,7 +178,7 @@ func (b indexBuffer) SetSubIndexName(id int, name string) error {
 }
 
 func (b indexBuffer) GetSubIndexName(id int) string {
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 

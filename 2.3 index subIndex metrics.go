@@ -6,7 +6,7 @@ import (
 
 func (b indexBufferMetric) SetSubIndexLastAccess(id int, lastAccess int64) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -17,7 +17,7 @@ func (b indexBufferMetric) SetSubIndexLastAccess(id int, lastAccess int64) {
 }
 
 func (b indexBufferMetric) GetSubIndexLastAccess(id int) int64 {
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -29,7 +29,7 @@ func (b indexBufferMetric) GetSubIndexLastAccess(id int) int64 {
 
 func (b indexBufferMetric) SetSubIndexLastUpdate(id int, lastUpdate int64) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -41,7 +41,7 @@ func (b indexBufferMetric) SetSubIndexLastUpdate(id int, lastUpdate int64) {
 
 func (b indexBufferMetric) GetSubIndexLastUpdate(id int) int64 {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 

@@ -3,7 +3,7 @@ package dacV3
 func initReadIndex(sfDacV3 *dacV3) {
 
 	// 1. Listar los indices actuales
-	totalBlocks := len(sfDacV3.indexMaster.globalSize) * sfDacV3.opts.sizeIndexMaster
+	totalBlocks := len(sfDacV3.indexMaster.globalSize) * sfDacV3.opts.SizeIndexMaster
 
 	for i := 0; i < totalBlocks; i++ {
 

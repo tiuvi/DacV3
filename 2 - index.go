@@ -22,7 +22,7 @@ const (
 
 	// Subíndices activos / Kept
 	field_IndexKeptInit = field_IndexSizePaginationEnd
-	field_IndexKeptEnd  = field_IndexKeptInit + maxSubIndexPerIndex
+	field_IndexKeptEnd  = field_IndexKeptInit + MaxSubIndexPerIndex
 
 	//Añadir este indice a la busqueda
 	field_HashSearchInit = field_IndexKeptEnd
@@ -30,7 +30,7 @@ const (
 )
 
 // maximo de subindices por indice 4096
-const maxSubIndexPerIndex = 82
+const MaxSubIndexPerIndex = 82
 
 const freeSizeInIndex = BufferAlignSize - sizeTotalIndex
 
@@ -60,13 +60,13 @@ const (
 	subIndex_LastUpdate_End  = subIndex_LastAccess_End + 8
 )
 
-const indexMetricsTotalSize = subIndex_LastUpdate_End * maxSubIndexPerIndex
+const indexMetricsTotalSize = subIndex_LastUpdate_End * MaxSubIndexPerIndex
 
-const sizeSubIndexMetric = BufferAlignSize / maxSubIndexPerIndex
+const sizeSubIndexMetric = BufferAlignSize / MaxSubIndexPerIndex
 
 const sizeSubIndex = subIndex_Size_End
 
-const sizeSubIndexInBlock = sizeSubIndex * maxSubIndexPerIndex
+const sizeSubIndexInBlock = sizeSubIndex * MaxSubIndexPerIndex
 
 // Sin usar sizeTotalIndex
 const sizeTotalIndex = sizeSubIndexInBlock + field_HashSearchEnd

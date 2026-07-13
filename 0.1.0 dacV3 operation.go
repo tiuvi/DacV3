@@ -59,7 +59,8 @@ func (sf *dacV3) ExpandSize(newSize int64) {
 	if newSize <= sf.len.Load() {
 		return
 	}
-
+	println("nuevo tamaño ", newSize, " viejo tamaño ", sf.len.Load())
+	
 	// mode = 0 (Sin KEEP_SIZE) para evitar actualizaciones de inodo en las escrituras posteriores
 	if err := unix.Fallocate(sf.fd, 0, 0, newSize); err != nil {
 

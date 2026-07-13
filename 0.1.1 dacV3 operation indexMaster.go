@@ -8,15 +8,15 @@ import (
 // Set marca un byte completo como ocupado (0xFF)
 func (b *indexMaster) Set(blockID int) (segmentIndex int, byteIndex int, alignedOffset4K int) {
 
-	segmentIndex = blockID / b.opts.sizeIndexMaster
+	segmentIndex = blockID / b.opts.SizeIndexMaster
 
-	byteIndex = blockID % b.opts.sizeIndexMaster
+	byteIndex = blockID % b.opts.SizeIndexMaster
 
 	// Asignamos el byte completo como ocupado (11111111)
 	b.globalSize[segmentIndex][byteIndex] = 0xFF
 
 	// Calculamos el bloque de 4096 al que pertenece este byte para O_DIRECT
-	// Como sizeIndexMaster es 1024, esto siempre dará 0, pero la fórmula te sirve
+	// Como SizeIndexMaster es 1024, esto siempre dará 0, pero la fórmula te sirve
 	// si en el futuro amplías tu mapa a más de 4096 bytes.
 	alignedOffset4K = (byteIndex / 4096) * 4096
 
@@ -26,8 +26,8 @@ func (b *indexMaster) Set(blockID int) (segmentIndex int, byteIndex int, aligned
 // UnSet marca un byte completo como libre (0x00)
 func (b *indexMaster) UnSet(blockID int) (segmentIndex int, byteIndex int, alignedOffset4K int) {
 
-	segmentIndex = blockID / b.opts.sizeIndexMaster
-	byteIndex = blockID % b.opts.sizeIndexMaster
+	segmentIndex = blockID / b.opts.SizeIndexMaster
+	byteIndex = blockID % b.opts.SizeIndexMaster
 
 	// Asignamos el byte completo como libre (00000000)
 	b.globalSize[segmentIndex][byteIndex] = 0x00
@@ -40,13 +40,13 @@ func (b *indexMaster) UnSet(blockID int) (segmentIndex int, byteIndex int, align
 // Get lee si el byte está ocupado (true) o libre (false) y retorna su offset absoluto en disco
 func (b *indexMaster) Get(blockID int) (isOccupied bool, offset int64) {
 
-	segmentIndex := blockID / b.opts.sizeIndexMaster
-	byteIndex := blockID % b.opts.sizeIndexMaster
+	segmentIndex := blockID / b.opts.SizeIndexMaster
+	byteIndex := blockID % b.opts.SizeIndexMaster
 
 	// Calculamos el offset absoluto del primer bit de este byte
 	offset = b.walSumBuffersSize +
 		(int64(segmentIndex) * b.segmentPhysicalSize) +
-		int64(b.opts.sizeIndexMaster) +
+		int64(b.opts.SizeIndexMaster) +
 		(int64(byteIndex) * b.idIndexPhysicalSizePerByte)
 
 	// Retorna true si el byte está completamente ocupado (0xFF)
@@ -72,14 +72,14 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 		count = 0
 
 		// Iteramos byte por byte
-		for by := 0; by < b.opts.sizeIndexMaster; by++ {
+		for by := 0; by < b.opts.SizeIndexMaster; by++ {
 
 			val := b.globalSize[seg][by]
 
 			if val == 0x00 { // Si el byte está completamente libre
 				if start == -1 {
 					// Guardamos el ID base absoluto
-					start = (seg * b.opts.sizeIndexMaster) + by
+					start = (seg * b.opts.SizeIndexMaster) + by
 				}
 				count++
 
@@ -99,9 +99,7 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 	return 0, false
 }
 
-
-
-func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bool) (idsIndex []uint32, err error) {
+func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (idsIndex []uint32, err error) {
 
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()
@@ -132,12 +130,12 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 		totalBits := maxMinRelation * ind
 
 		// 1. Validamos que los bits cuadren exactamente con la paginación solicitada
-		if totalBits % int(relationWithMinBlock) != 0 {
+		if totalBits%int(relationWithMinBlock) != 0 {
 			continue // Aún no cuadra de forma exacta con la paginación
 		}
 
 		// 2. Validamos que los bits conformen bytes completos (múltiplos de 8)
-		if totalBits % 8 != 0 {
+		if totalBits%8 != 0 {
 			continue // Aún no conforma un byte completo
 		}
 
@@ -158,7 +156,7 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 		totalIndex *= multiplier
 	}
 
-	if manyBytes > sfDacV3.indexMaster.opts.sizeIndexMaster {
+	if manyBytes > sfDacV3.indexMaster.opts.SizeIndexMaster {
 		// Si en el futuro necesitas más, tendrás que hacer un bucle externo llamando a reserveSize varias veces
 		return nil, errors.New("se han solicitado demasiados bloques de golpe y exceden la capacidad contigua de un solo segmento")
 	}
@@ -169,13 +167,17 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 		// No hay espacio en los segmentos actuales. Creamos uno nuevo dinámicamente.
 
 		// 1. Añadimos un nuevo mapa de bits vacío a la memoria RAM
-		newBuffer := MakeAlignedBlock(sfDacV3.indexMaster.opts.sizeIndexMaster)
+		newBuffer := MakeAlignedBlock(sfDacV3.indexMaster.opts.SizeIndexMaster)
+
 		sfDacV3.indexMaster.globalSize = append(sfDacV3.indexMaster.globalSize, newBuffer)
 
 		// 2. Calculamos el nuevo tamaño físico que debe tener el archivo
 		newSegmentsCount := len(sfDacV3.indexMaster.globalSize)
 
-		newFileSize := walSumBuffersSize + int64(newSegmentsCount)*sfDacV3.indexMaster.segmentPhysicalSize
+		//expandimos al tamaño justo del segmento anterior + el tamaño del nuevo indexmaster
+		newFileSize := walSumBuffersSize +
+			(int64(newSegmentsCount-1) * sfDacV3.indexMaster.segmentPhysicalSize) +
+			int64(sfDacV3.opts.SizeIndexMaster)
 
 		// 3. Expandimos el archivo en el disco
 		sfDacV3.ExpandSize(newFileSize)
@@ -189,6 +191,7 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 
 	var initSegIndex int
 	var initIdIndex int
+	var lastIdIndex int
 	var initAlignedOffset4K int
 
 	var lastAlignedOffset4K int
@@ -206,8 +209,17 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 			initAlignedOffset4K = alignedOffset4K
 		}
 
+		lastIdIndex = idIndex
 		lastAlignedOffset4K = alignedOffset4K
 	}
+
+	// Verificamos si el archivo necesita crecer para cubrir los datos del último byte reservado
+	requiredSize := walSumBuffersSize +
+		(int64(initSegIndex) * sfDacV3.indexMaster.segmentPhysicalSize) +
+		int64(sfDacV3.opts.SizeIndexMaster) +
+		(int64(lastIdIndex+1) * sfDacV3.indexMaster.idIndexPhysicalSizePerByte)
+
+	sfDacV3.ExpandSize(requiredSize)
 
 	//Buffer exacto de los bytes actualizado
 	bufIndexMaster := sfDacV3.indexMaster.globalSize[initSegIndex][initAlignedOffset4K : lastAlignedOffset4K+4096]
@@ -221,7 +233,7 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 	segmentOffset := walSumBuffersSize + int64(initSegIndex)*sfDacV3.indexMaster.segmentPhysicalSize
 
 	// 2. El tamaño del mapa que debemos "saltar" para llegar a los datos
-	headerMapSize := int64(sfDacV3.indexMaster.opts.sizeIndexMaster)
+	headerMapSize := int64(sfDacV3.indexMaster.opts.SizeIndexMaster)
 
 	// 3. Dónde empiezan los datos relativos a este byte dentro del segmento
 	dataOffsetInSegment := int64(initIdIndex) * sfDacV3.indexMaster.idIndexPhysicalSizePerByte
@@ -240,14 +252,12 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bo
 		fisrtOffsetIndex := baseDataOffset + indexOffset
 
 		var idIndex uint32
-		if isSearch{
+		if isSearch {
 			idIndex = newIndexSearch(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
-			
-		}else{
+
+		} else {
 			idIndex = newIndex(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
 		}
-
-		
 
 		idsIndex[ind] = idIndex
 	}

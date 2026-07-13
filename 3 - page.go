@@ -36,7 +36,7 @@ func (sfDacV3 *dacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 	var needsUpdate bool
 
 	// Comprobar lista de activados con todos los subindices de paginas
-	for i := 0; i <= maxSubIndexPerIndex; i++ {
+	for i := 0; i < MaxSubIndexPerIndex; i++ {
 
 		if !bufIndex.IsIndexKept(i) {
 			continue
@@ -146,4 +146,12 @@ func (sfDacV3 *dacV3) LoadPage(hash [32]byte) (data []byte, err error) {
 	sfDacV3.ReadAt(buf, pageOffset)
 
 	return buf, nil
+}
+
+func (sfDacV3 *dacV3) WritePage(hash [32]byte, data []byte, offset int64) {
+
+}
+//Si no existe error
+func (sfDacV3 *dacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64) {
+
 }

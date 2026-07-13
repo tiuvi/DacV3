@@ -52,7 +52,7 @@ type dacV3 struct {
 
 	//Mapa de nombres con direccion al array con los datos de cada archivo
 	muPages sync.RWMutex
-	pages map[[32]byte]int
+	pages   map[[32]byte]int
 
 	//Pool de buffers para los datos de las paginas
 	dataPools map[int]*bufferArena
@@ -69,21 +69,23 @@ type dacV3 struct {
 type SizeConfig struct {
 	Size                uint32
 	IndexSizeChan       uint32
-	nBuffersAvaibleData uint32
+	NBuffersAvaibleData uint32
 }
+ 
+func InitDacV3(opts DacV3Options) *dacV3 {
 
-func newDacV3(opts DacV3Options) *dacV3 {
-
-	sfDacV3 := openFileDacV3(opts.dacRoute)
+	sfDacV3 := openFileDacV3(opts.DacRoute)
 
 	sfDacV3.opts = &opts
 
 	startHandleConfigIndexSize(sfDacV3)
 
+	startHandleIndexMaster(sfDacV3)
+
 	//Primeramente arrancar las operaciones de escritura en wall
 	startHandleWallBuffer(sfDacV3)
 
-	startHandleIndexMaster(sfDacV3)
+	initIndexMasterBuffers(sfDacV3)
 
 	startHandleIndex(sfDacV3)
 

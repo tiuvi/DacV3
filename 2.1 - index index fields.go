@@ -3,7 +3,6 @@ package dacV3
 import (
 	"encoding/binary"
 	"hash/crc32"
-
 )
 
 func (b indexBuffer) CalCheckSum() uint32 {
@@ -24,7 +23,6 @@ func (b indexBuffer) GetCheckSum() uint32 {
 	// Leer el checksum guardado en el espacio [0:4]
 	return binary.BigEndian.Uint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd])
 }
-
 
 // SetSequence asigna la secuencia (8 bytes) en la posición correspondiente
 func (b indexBuffer) SetSequence(seq int64) {
@@ -47,7 +45,7 @@ func (b indexBuffer) GetSizePagination() uint32 {
 
 func (b indexBuffer) SetIndexKept(id int) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
@@ -57,17 +55,17 @@ func (b indexBuffer) SetIndexKept(id int) {
 
 func (b indexBuffer) UnSetIndexKept(id int) {
 
-	if id > maxSubIndexPerIndex {
+	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
 	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
 	blockSubIndexActive[id] = 0
 }
-
+ 
 func (b indexBuffer) IsIndexKept(id int) bool {
 
-	if id > maxSubIndexPerIndex {
+	if id >= MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return false
 	}
@@ -80,10 +78,10 @@ func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
 
 	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
 
-	// Recorremos los índices desde 0 hasta el límite maxSubIndexPerIndex
-	for id := 0; id <= maxSubIndexPerIndex; id++ {
+	// Recorremos los índices desde 0 hasta el límite MaxSubIndexPerIndex
+	for id := 0; id <= MaxSubIndexPerIndex; id++ {
 
-		// Control de seguridad por si el tamaño del slice es menor que maxSubIndexPerIndex
+		// Control de seguridad por si el tamaño del slice es menor que MaxSubIndexPerIndex
 		if id >= len(blockSubIndexActive) {
 			break
 		}
@@ -98,7 +96,7 @@ func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
 	return -1, false
 }
 
-func (b indexBuffer) GetHashSearch() [32]byte{
+func (b indexBuffer) GetHashSearch() [32]byte {
 
 	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
 
@@ -125,6 +123,5 @@ func (b indexBuffer) UnSetHashSearch() {
 
 // GetMetadata devuelve todos los campos directamente usando tus funciones Get existentes
 func (b indexBuffer) GetMetadata() (checkSum uint32, sizePagination uint32, sequence int64, hash [32]byte) {
-	return  b.GetCheckSum() ,b.GetSizePagination(), b.GetSequence(), b.GetHashSearch()
+	return b.GetCheckSum(), b.GetSizePagination(), b.GetSequence(), b.GetHashSearch()
 }
-

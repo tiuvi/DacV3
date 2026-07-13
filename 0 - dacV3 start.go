@@ -16,6 +16,8 @@ type indexMaster struct {
 	idIndexPhysicalSizePerByte int64
 	sizeSubIndex               map[uint32]configIndex
 	opts                       *DacV3Options
+	walSumBuffersSize          int64
+	maxMinRelationBlock        int
 }
 
 type dacV3 struct {
@@ -29,26 +31,37 @@ type dacV3 struct {
 	//indexMaster
 	indexMaster *indexMaster
 
-	//Gestion de indices
-	//localizacion de los indices estructuras en un array
+	//LOCALIZACION DE TODOS LOS INDICES
 	indexLocation *PagedPool[Index]
 
+	//INDICE SEARCH
 	//unicamente para cluster de index
 	indexSearch         map[[32]byte]IndexSearch
 	indexSearchPool     chan uint32
 	indexSearchDataPool *bufferArena
-	indexBufferDouble   []byte
-	//Localizacion de los bufeer de los indices en un array
-	indexBuffer *bufferArena
 
+	//INDICES NORMALES
 	//Indices libres para escritura
 	indexPools map[uint32]chan uint32
+	//Localizacion de los bufeer de los indices en un array, tamaño 4096
+	indexBuffer *bufferArena
 
-	//Se usa int para no tener que hacer conversiones al optener la pagina
+	//PAGINAS
+	//Donde se localizan las paginas
+	pageLocation *PagedPool[Page]
+
+	//Mapa de nombres con direccion al array con los datos de cada archivo
+	muPages sync.RWMutex
+	pages map[[32]byte]int
+
+	//Pool de buffers para los datos de las paginas
 	dataPools map[int]*bufferArena
 
+	//ESCRITURAS
 	//pool de escritura para el wall
 	dacV3WorkerWriter *dacV3WorkerWriter
+
+	globalSizeSubIndex map[uint32]configIndex
 
 	opts *DacV3Options
 }
@@ -61,9 +74,11 @@ type SizeConfig struct {
 
 func newDacV3(opts DacV3Options) *dacV3 {
 
-	sfDacV3 := openFileDacV3()
+	sfDacV3 := openFileDacV3(opts.dacRoute)
 
 	sfDacV3.opts = &opts
+
+	startHandleConfigIndexSize(sfDacV3)
 
 	//Primeramente arrancar las operaciones de escritura en wall
 	startHandleWallBuffer(sfDacV3)

@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-//Indice principal
+// Indice principal
 const (
 
 	// Checksum
@@ -30,7 +30,7 @@ const (
 )
 
 // maximo de subindices por indice 4096
-const maxSubIndexPerIndex = 98
+const maxSubIndexPerIndex = 82
 
 const freeSizeInIndex = BufferAlignSize - sizeTotalIndex
 
@@ -38,11 +38,14 @@ const freeSizeInIndex = BufferAlignSize - sizeTotalIndex
 const (
 
 	// Posiciones relativas dentro de un único subíndice
-	subIndex_Hash_Init       = 0
-	subIndex_Hash_End        = subIndex_Hash_Init + 32
+	subIndex_Hash_Init = 0
+	subIndex_Hash_End  = subIndex_Hash_Init + 32
 
-	subIndex_Size_Init       = subIndex_Hash_End
-	subIndex_Size_End        = subIndex_Size_Init + 8
+	subIndexSequence_Init = subIndex_Hash_End
+	subIndexSequence_End  = subIndexSequence_Init + 8
+
+	subIndex_Size_Init = subIndexSequence_End
+	subIndex_Size_End  = subIndex_Size_Init + 8
 )
 
 // Nuevo pagina para analiticas
@@ -68,7 +71,6 @@ const sizeSubIndexInBlock = sizeSubIndex * maxSubIndexPerIndex
 // Sin usar sizeTotalIndex
 const sizeTotalIndex = sizeSubIndexInBlock + field_HashSearchEnd
 
-
 // Calculo del indice + el numero de subindices por el tamaño de cada indice
 const totalIndexAndSubIndex = BufferAlignSize - sizeTotalIndex
 
@@ -84,6 +86,7 @@ type Index struct {
 	//Array donde esta el buffer
 	idLocationBuffer uint32
 }
+
 /*
 No necesita mutex ya que depende de otra pagina padre
 */

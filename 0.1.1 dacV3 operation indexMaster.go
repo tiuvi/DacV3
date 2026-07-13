@@ -37,14 +37,22 @@ func (b *indexMaster) UnSet(blockID int) (segmentIndex int, byteIndex int, align
 	return
 }
 
-// Get lee si el byte está ocupado (true) o libre (false)
-func (b *indexMaster) Get(blockID int) bool {
+// Get lee si el byte está ocupado (true) o libre (false) y retorna su offset absoluto en disco
+func (b *indexMaster) Get(blockID int) (isOccupied bool, offset int64) {
 
 	segmentIndex := blockID / b.opts.sizeIndexMaster
 	byteIndex := blockID % b.opts.sizeIndexMaster
 
-	// Retorna true si el byte está ocupado
-	return b.globalSize[segmentIndex][byteIndex] == 0xFF
+	// Calculamos el offset absoluto del primer bit de este byte
+	offset = b.walSumBuffersSize +
+		(int64(segmentIndex) * b.segmentPhysicalSize) +
+		int64(b.opts.sizeIndexMaster) +
+		(int64(byteIndex) * b.idIndexPhysicalSizePerByte)
+
+	// Retorna true si el byte está completamente ocupado (0xFF)
+	isOccupied = b.globalSize[segmentIndex][byteIndex] == 0xFF
+
+	return isOccupied, offset
 }
 
 // GetBytesOff busca 'n' bytes consecutivos libres (0x00)
@@ -91,28 +99,9 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 	return 0, false
 }
 
-func newIndex(sfDacV3 *dacV3, offset int64, sizePagination uint32) (idIndex uint32, buf []byte) {
 
-	idIndex, index := sfDacV3.indexLocation.New()
 
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
-
-	bufIndex := indexBuffer(buf)
-
-	bufIndex.SetSizePagination(sizePagination)
-
-	bufIndex.SetSequence(1)
-
-	bufIndex.SetCheckSum()
-
-	index.idLocationBuffer = idBuffer
-
-	index.offset = offset
-
-	return
-}
-
-func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64) (idsIndex []uint32, err error) {
+func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64 , isSearch bool) (idsIndex []uint32, err error) {
 
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()
@@ -129,6 +118,9 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64) (idsIndex []
 
 	relationWithMinBlock := sizePagination / baseUnitSize
 
+	// Calculamos cuántos bloques mínimos caben en el bloque máximo (ej. 64k / 4k = 16 bits)
+	maxMinRelation := sfDacV3.indexMaster.maxMinRelationBlock
+
 	// 3. TU BUCLE OPTIMIZADO (Bulk Allocation Math)
 	manyBytes := 0
 	totalIndex := 0
@@ -136,15 +128,23 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64) (idsIndex []
 	// Empezamos en 1 para evitar que el 0 de un falso positivo inmediato
 	for ind := 1; ; ind++ {
 
-		indexPerByteValidation := (8 * ind) % int(relationWithMinBlock)
+		// Total de bits (mínimos) que estamos evaluando en esta iteración
+		totalBits := maxMinRelation * ind
 
-		if indexPerByteValidation != 0 {
-			continue // Aún no cuadra de forma exacta
+		// 1. Validamos que los bits cuadren exactamente con la paginación solicitada
+		if totalBits % int(relationWithMinBlock) != 0 {
+			continue // Aún no cuadra de forma exacta con la paginación
+		}
+
+		// 2. Validamos que los bits conformen bytes completos (múltiplos de 8)
+		if totalBits % 8 != 0 {
+			continue // Aún no conforma un byte completo
 		}
 
 		// Encontramos la coincidencia perfecta (Mínimo Común Múltiplo)
-		manyBytes = ind
-		totalIndex = (8 * ind) / int(relationWithMinBlock)
+		// Convertimos los bits totales a bytes completos
+		manyBytes = totalBits / 8
+		totalIndex = totalBits / int(relationWithMinBlock)
 		break // Salimos del bucle
 	}
 
@@ -239,14 +239,20 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64) (idsIndex []
 		// Offset final absoluto en disco
 		fisrtOffsetIndex := baseDataOffset + indexOffset
 
-		idIndex, buf := newIndex(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
+		var idIndex uint32
+		if isSearch{
+			idIndex = newIndexSearch(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
+			
+		}else{
+			idIndex = newIndex(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
+		}
 
-		sfDacV3.WriteIndex(buf, fisrtOffsetIndex)
+		
 
 		idsIndex[ind] = idIndex
 	}
 
-	err = sfDacV3.WriteIndexMaster(bufIndexMaster , OffsetIndexMaster)
+	err = sfDacV3.WriteIndexMaster(bufIndexMaster, OffsetIndexMaster)
 	if err != nil {
 		return nil, err
 	}

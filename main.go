@@ -8,12 +8,49 @@ import (
 /*
 /media/franky/tiuviweb/go/bin/go mod tidy
 
+/media/franky/tiuviweb/go/bin/go build -o dacV3Run main.go
+chmod +x dacV3Run
+./dacV3Run
+
 /media/franky/tiuviweb/go/bin/go run main.go
 
 
 /media/franky/tiuviweb/go/bin/go mod init dacv3
 /media/franky/tiuviweb/go/bin/go get golang.org/x/sys/unix
 /media/franky/tiuviweb/go/bin/go run main.go
+
+Inicio de doc V3 y mecanismos de recuperación
+
+1° Lectura de WAL
+Si el tipo de índice es 0 se descarta.
+
+Si el tipo de índice es directo se pide los datos en su offset original y se compara
+con el checksum; si no coincide se abortan los datos.
+
+Si el tipo de índice es modify se pide los datos que hay en el WAL; si coincide con el checksum
+se escriben los datos en su origen.
+
+La lectura del WAL sigue orden de secuencia.
+
+
+2° Lectura e iniciación del almacenamiento global
+Primero se lee el mapa de almacenamiento global y se lee en las posiciones ocupadas; en
+caso de no estar ocupada una posición serían datos huérfanos.
+
+
+3° Lectura e iniciación de índices
+
+Verificar secuencia superior en el índice.
+
+Verificar el checksum.
+
+4º Lectura e iniciacion de pages
+
+Comprobar lista de activados con todos los subindices de paginas, si en la lista se activo
+pero el subindice esta vacio borrarlo de la lista de activados. (Significa que se
+reservo un espacio en ese indice pero al final no se escribio)
+
+verificar la version de los subindices de paginas el superior gana
 
 
 Creacion de indexMaster y gestion del espacio
@@ -233,6 +270,23 @@ func main() {
 	println("Bytes totales asignados:", totalAlloc)
 	println("Promedio por entrada (Preasignado):", totalAlloc / totalEntradas, "bytes")
 }
+
+
+
+para test
+
+sudo mkdir /mnt/ramdisk
+sudo mount -t tmpfs -o size=1G tmpfs /mnt/ramdisk
+sudo chown $USER:$USER /mnt/ramdisk
+
+Verifica:
+
+df -h /mnt/ramdisk
+
+Desmontar:
+
+sudo umount /mnt/ramdisk
+
 */
 
 type WalZeroCopy struct {
@@ -289,6 +343,7 @@ tamaño total
 */
 
 type DacV3Options struct {
+	dacRoute string
 	sizeIndexMaster        int
 	MaxReserveSize         int64
 	SsdNIopsMili           uint32
@@ -326,20 +381,21 @@ func main() {
 
 	// Definimos las opciones de forma muy visual y explícita
 	config := DacV3Options{
-		sizeIndexMaster:        4096,              //multiplos de 4096
-		MaxReserveSize:         1024 * 1024 * 100, // 100 MB
-		SsdNIopsMili:           50,
-		NBuffersAvailableIndex: 128,
+		dacRoute:"/mnt/ramdisk",
+		sizeIndexMaster: 4096,              //multiplos de 4096
+		MaxReserveSize:  1024 * 1024 * 100, // 100 MB
+		SsdNIopsMili:    50,
 
 		NBuffersAvailableIndexSearch:     8,
 		NChanAvaibleIndexSearch:          8,
+		NBuffersAvailableIndexSearchData: maxSubIndexPerIndex * 8,
 
-		NBuffersAvailableIndexSearchData: maxSubIndexPerIndex,
+		NBuffersAvailableIndex: 23,
 		SupportedSizes: []SizeConfig{
 			{
 				Size:                4096,
-				IndexSizeChan:       8,
-				nBuffersAvaibleData: maxSubIndexPerIndex * 8,
+				IndexSizeChan:       16,
+				nBuffersAvaibleData: maxSubIndexPerIndex * 16,
 			},
 			{
 				Size:                16384,

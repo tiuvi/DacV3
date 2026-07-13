@@ -81,16 +81,16 @@ func (sf *dacV3) ExpandSize(newSize int64) {
 	return
 }
 
-func openFileDacV3() *dacV3 {
+func openFileDacV3(dacRoute string) *dacV3 {
 
-	fd, err := unix.Open("/media/franky/tiuviweb/test/4 - dacV3/files", unix.O_RDWR|unix.O_CREAT|unix.O_DIRECT, 0666)
+	fd, err := unix.Open(dacRoute, unix.O_RDWR|unix.O_CREAT|unix.O_DIRECT, 0666)
 	if err != nil {
 		// Manejar el error de forma oportuna
 		log.Fatalf("Error al abrir el archivo: %v", err)
 	}
 
 	// Convertimos fd (int) a uintptr de manera explícita
-	dacV3Fd := os.NewFile(uintptr(fd), "dacv3")
+	dacV3Fd := os.NewFile(uintptr(fd), dacRoute)
 
 	size, err := dacV3Fd.Seek(0, 2)
 	if err != nil {

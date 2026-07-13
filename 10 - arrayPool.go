@@ -19,8 +19,8 @@ type PagedPool[T any] struct {
 	nextID     atomic.Uint32
 }
 
-// NewPagedPool Constructor genérico
-func NewPagedPool[T any]() *PagedPool[T] {
+// NewPoolArray Constructor genérico
+func NewPoolArray[T any]() *PagedPool[T] {
 	pool := &PagedPool[T]{
 		chunks: make([]*Chunk[T], 0, 1024),
 	}

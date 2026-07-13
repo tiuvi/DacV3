@@ -1,7 +1,7 @@
 package dacV3
 
  
-var globalSizeSubIndex map[uint32]configIndex
+
 
 const BufferAlignSize = 4096 // Tamaño de bloque típico en Linux (ext4/XFS)
 
@@ -24,9 +24,9 @@ type configIndex struct {
 }
 
 // init se ejecuta automáticamente al iniciar el programa, antes que main()
-func init() {
+func startHandleConfigIndexSize(sfDacV3 *dacV3) {
 	
-	globalSizeSubIndex = make(map[uint32]configIndex)
+	sfDacV3.globalSizeSubIndex = make(map[uint32]configIndex)
 
 	// Iteramos desde 1 hasta 16 para abarcar desde 4096 hasta 65536
 	for multiplier := int64(1); multiplier <= 32; multiplier++ {
@@ -45,7 +45,7 @@ func init() {
 		// De esta forma, garantizamos que los datos terminan exactamente en el último byte.
 		startOffset := (blocks * BufferAlignSize) - (pages * pageSize)
 
-		globalSizeSubIndex[uint32(pageSize)] = configIndex{
+		sfDacV3.globalSizeSubIndex[uint32(pageSize)] = configIndex{
 			blocks:          blocks,
 			sizeBlock:       blocks * BufferAlignSize,
 			pages:           pages,

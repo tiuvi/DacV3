@@ -112,6 +112,38 @@ func (b indexBuffer) GetSubIndexSize(id int) int64 {
 	return int64(val)
 }
 
+func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido: Sequence y el parámetro
+
+	if id > maxSubIndexPerIndex {
+		panic(errSubIndexOverFlow)
+	}
+
+	zoneSubIndex := b[field_subIndexInit:]
+	offsetIndex := id * sizeSubIndex
+
+	// Corregido: Actualizado el comentario para que tenga sentido
+	// La Secuencia ocupa los bytes correspondientes relativos a este subíndice
+	binary.BigEndian.PutUint64(
+        zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End], 
+        uint64(sequence),
+    )
+}
+
+func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
+	if id > maxSubIndexPerIndex {
+		panic(errSubIndexOverFlow)
+	}
+
+	zoneSubIndex := b[field_subIndexInit:]
+	offsetIndex := id * sizeSubIndex
+
+	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
+	val := binary.BigEndian.Uint64(
+        zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End],
+    )
+	return int64(val)
+}
+
 func (b indexBuffer) SetSubIndexName(id int, name string) error {
 
 	if id > maxSubIndexPerIndex {

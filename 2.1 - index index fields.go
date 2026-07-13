@@ -45,8 +45,6 @@ func (b indexBuffer) GetSizePagination() uint32 {
 	return binary.BigEndian.Uint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
 }
 
-
-
 func (b indexBuffer) SetIndexKept(id int) {
 
 	if id > maxSubIndexPerIndex {
@@ -129,3 +127,4 @@ func (b indexBuffer) UnSetHashSearch() {
 func (b indexBuffer) GetMetadata() (checkSum uint32, sizePagination uint32, sequence int64, hash [32]byte) {
 	return  b.GetCheckSum() ,b.GetSizePagination(), b.GetSequence(), b.GetHashSearch()
 }
+

@@ -88,14 +88,17 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 
 	sfDacV3.indexMaster.opts = sfDacV3.opts
 
+	sfDacV3.indexMaster.walSumBuffersSize = sfDacV3.dacV3WorkerWriter.walSumBuffersSize
+
 	sfDacV3.indexMaster.sizeSubIndex = make(map[uint32]configIndex)
 
 	sfDacV3.indexMaster.blockMinSize = configIndex{}
+
 	sfDacV3.indexMaster.blockMaxSize = configIndex{}
 
 	for _, item := range sfDacV3.opts.SupportedSizes {
 
-		data, found := globalSizeSubIndex[item.Size]
+		data, found := sfDacV3.globalSizeSubIndex[item.Size]
 		if !found {
 			log.Fatal("Tamaño de indice no compatible")
 		}
@@ -118,6 +121,8 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 			sfDacV3.indexMaster.blockMaxSize = data
 		}
 	}
+
+	sfDacV3.indexMaster.maxMinRelationBlock = int(sfDacV3.indexMaster.blockMaxSize.pageSize / sfDacV3.indexMaster.blockMinSize.pageSize)
 
 	calcIndexMasterStaticSize(sfDacV3)
 

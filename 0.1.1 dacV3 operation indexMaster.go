@@ -2,7 +2,6 @@ package dacV3
 
 import (
 	"errors"
-	"log"
 )
 
 // Set marca un byte completo como ocupado (0xFF)
@@ -99,10 +98,42 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 	return 0, false
 }
 
-func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (idsIndex []uint32, err error) {
+var errServerNotSizeAvaible = errors.New("server not size avaible") 
+var errFileSizeLimitExceeded = errors.New("the file exceeds the server size limit, per file")
+
+func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
 
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()
+
+	if isSearch {
+
+		if len(sfDacV3.indexSearchPool) > int(nIndex) {
+			return
+		}
+
+		needed := int(sfDacV3.opts.NChanAvaibleIndexSearch) - len(sfDacV3.indexSearchPool)
+		if needed > int(nIndex) {
+			nIndex = int64(needed)
+		}
+
+	} else {
+
+		//Tamaño del canal declarado
+		data := sfDacV3.indexMaster.sizeSubIndex[uint32(sizePagination)]
+
+		//Tamaño del pool
+		pool := sfDacV3.indexPools[uint32(sizePagination)]
+		if len(pool) > int(nIndex) {
+			return
+		}
+
+		// Usar los valores en IndexSizeChan
+		needed := int(data.IndexSizeChan) - len(pool)
+		if needed > int(nIndex) {
+			nIndex = int64(needed)
+		}
+	}
 
 	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
 
@@ -111,7 +142,7 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 
 	// 2. Validación de que es múltiplo
 	if sizePagination%baseUnitSize != 0 {
-		return nil, errors.New("tamaño de pagina no compatible")
+		return errors.New("tamaño de pagina no compatible")
 	}
 
 	relationWithMinBlock := sizePagination / baseUnitSize
@@ -157,8 +188,8 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 	}
 
 	if manyBytes > sfDacV3.indexMaster.opts.SizeIndexMaster {
-		// Si en el futuro necesitas más, tendrás que hacer un bucle externo llamando a reserveSize varias veces
-		return nil, errors.New("se han solicitado demasiados bloques de golpe y exceden la capacidad contigua de un solo segmento")
+		//Error aqui excede la capacidad por segmento, no se pueden optener bytes de varios segmentos diferentes.
+		return errFileSizeLimitExceeded
 	}
 
 	// 4. Buscar espacio libre en el mapa (manyBytes)
@@ -185,7 +216,7 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 		// 4. Relanzamos la búsqueda (ahora garantizado que habrá espacio)
 		startBlockID, found = sfDacV3.indexMaster.GetBytesOff(manyBytes)
 		if !found {
-			log.Fatalln("error critico: sin espacio tras expandir el archivo")
+			return errServerNotSizeAvaible
 		}
 	}
 
@@ -226,9 +257,6 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 
 	OffsetIndexMaster := walSumBuffersSize + (int64(initSegIndex) * sfDacV3.indexMaster.segmentPhysicalSize) + int64(initAlignedOffset4K)
 
-	//calculando el offset de los indices
-	idsIndex = make([]uint32, totalIndex)
-
 	// 1. Dónde empieza el bloque físico entero de este segmento (Absoluto)
 	segmentOffset := walSumBuffersSize + int64(initSegIndex)*sfDacV3.indexMaster.segmentPhysicalSize
 
@@ -253,19 +281,26 @@ func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 
 		var idIndex uint32
 		if isSearch {
+
 			idIndex = newIndexSearch(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
 
+			pool := sfDacV3.indexSearchPool
+			pool <- idIndex
+
 		} else {
+
 			idIndex = newIndex(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
+
+			pool := sfDacV3.indexPools[uint32(sizePagination)]
+			pool <- idIndex
 		}
 
-		idsIndex[ind] = idIndex
 	}
 
 	err = sfDacV3.WriteIndexMaster(bufIndexMaster, OffsetIndexMaster)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return idsIndex, nil
+	return nil
 }

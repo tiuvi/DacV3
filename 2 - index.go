@@ -80,7 +80,7 @@ const field_subIndexInit = BufferAlignSize - sizeSubIndexInBlock
 // Indice en array necesita su offset para poder eliminar el buffer y volver abrir el buffer cuando se use
 type Index struct {
 	//Bloqueo de mutex
-	mu sync.Mutex
+	mu sync.Mutex 
 	//Localizacion del indice en el sistema de archivos
 	offset int64
 	//Array donde esta el buffer

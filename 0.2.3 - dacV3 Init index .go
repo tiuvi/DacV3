@@ -1,5 +1,7 @@
 package dacV3
 
+import "log"
+
 func initReadIndex(sfDacV3 *dacV3) {
 
 	// 1. Listar los indices actuales
@@ -54,29 +56,9 @@ func initReadIndex(sfDacV3 *dacV3) {
 	needed := int(sfDacV3.opts.NChanAvaibleIndexSearch) - len(sfDacV3.indexSearchPool)
 	if needed > 0 {
 
-		ids, err := sfDacV3.newIndexs(int64(needed), int64(sfDacV3.indexMaster.blockMaxSize.pageSize), true)
-		if err == nil {
-
-			for _, id := range ids {
-
-				index := sfDacV3.indexLocation.Get(id)
-
-				buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
-
-				bufIndex := indexBuffer(buf)
-
-				hash := bufIndex.GetHashSearch()
-
-				sfDacV3.indexSearch[hash] = IndexSearch{
-					offset:           index.offset,
-					idLocationBuffer: index.idLocationBuffer,
-				}
-
-				select {
-				case sfDacV3.indexSearchPool <- id:
-				default:
-				}
-			}
+		err := sfDacV3.newIndexs(int64(needed), int64(sfDacV3.indexMaster.blockMaxSize.pageSize), true)
+		if err != nil {
+			log.Fatalln(err.Error())
 		}
 	}
 
@@ -90,19 +72,9 @@ func initReadIndex(sfDacV3 *dacV3) {
 
 		if needed > 0 {
 
-			ids, err := sfDacV3.newIndexs(int64(needed), int64(item.Size), false)
-			if err == nil {
-
-				// En caso de que newIndexs devuelva indices de mas, usamos select default
-				for _, id := range ids {
-
-					select {
-
-					case pool <- id:
-
-					default:
-					}
-				}
+			err := sfDacV3.newIndexs(int64(needed), int64(item.Size), false)
+			if err != nil {
+				log.Fatalln(err.Error())
 			}
 		}
 	}
@@ -139,7 +111,7 @@ func processLoadedIndex(sfDacV3 *dacV3, idIndex uint32, sizePagination uint32, h
 func startHandleIndex(sfDacV3 *dacV3) {
 
 	//Inicio donde se guardan los indices
-	sfDacV3.indexLocation = NewPoolArray[Index]()
+	sfDacV3.indexLocation = NewPoolArray[Index](1000)
 
 	//Donde se guardan los indices indexados a memoria
 	sfDacV3.indexSearch = make(map[[32]byte]IndexSearch)

@@ -3,7 +3,6 @@ package dacV3
 import (
 	"context"
 	"errors"
-
 	"sync"
 )
 
@@ -428,6 +427,7 @@ func (sfDacV3 *dacV3) flusher() {
 
 		pool.mu.Unlock()
 
+		println("¿Estamos agrupando writes?" ,len(batch[bufferAEnviarDisco]) )
 		// 7. Esperamos a que todos los workers terminen de escribir en memoria
 		if len(batch[bufferAEnviarDisco]) > 0 {
 

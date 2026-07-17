@@ -2,6 +2,7 @@ package dacV3
 
 import (
 	"log"
+	"slices"
 )
 
 const (
@@ -112,6 +113,8 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 			log.Fatal("Tamaño de indice no compatible")
 		}
 
+		data.IndexSizeChan = item.IndexSizeChan
+
 		sfDacV3.indexMaster.sizeSubIndex[item.Size] = data
 
 		//Iniciamos el estado del bloque minimo con el primer tamaño compatible
@@ -129,7 +132,11 @@ func startHandleIndexMaster(sfDacV3 *dacV3) {
 		if sfDacV3.indexMaster.blockMaxSize.pageSize < int64(data.pageSize) {
 			sfDacV3.indexMaster.blockMaxSize = data
 		}
+
+		sfDacV3.globalSizeIndex = append(sfDacV3.globalSizeIndex, uint32(data.pageSize))
 	}
+
+	slices.Sort(sfDacV3.globalSizeIndex)
 
 	sfDacV3.indexMaster.maxMinRelationBlock = int(sfDacV3.indexMaster.blockMaxSize.pageSize / sfDacV3.indexMaster.blockMinSize.pageSize)
 

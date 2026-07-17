@@ -36,7 +36,9 @@ type dacV3 struct {
 
 	//INDICE SEARCH
 	//unicamente para cluster de index
-	indexSearch         map[[32]byte]IndexSearch
+	indexSearch map[[32]byte]IndexSearch
+	//indexSearch ConcurrentMap[[32]byte , IndexSearch]
+
 	indexSearchPool     chan uint32
 	indexSearchDataPool *bufferArena
 
@@ -51,17 +53,20 @@ type dacV3 struct {
 	pageLocation *PagedPool[Page]
 
 	//Mapa de nombres con direccion al array con los datos de cada archivo
-	muPages sync.RWMutex
-	pages   map[[32]byte]int
+	pages *ConcurrentMap[uint32]
 
 	//Pool de buffers para los datos de las paginas
-	dataPools map[int]*bufferArena
+	dataPools map[int]*GlobalBufferPool
+
+	writeDataPools map[int]*bufferArena
 
 	//ESCRITURAS
 	//pool de escritura para el wall
 	dacV3WorkerWriter *dacV3WorkerWriter
 
 	globalSizeSubIndex map[uint32]configIndex
+
+	globalSizeIndex []uint32
 
 	opts *DacV3Options
 }
@@ -71,7 +76,7 @@ type SizeConfig struct {
 	IndexSizeChan       uint32
 	NBuffersAvaibleData uint32
 }
- 
+
 func InitDacV3(opts DacV3Options) *dacV3 {
 
 	sfDacV3 := openFileDacV3(opts.DacRoute)

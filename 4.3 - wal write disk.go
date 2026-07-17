@@ -17,9 +17,8 @@ func (sfDacV3 *dacV3) processWriteUnSafe(j *jobWriter) {
 		}
 
 		// 3. Eliminamos la arena de memoria correspondiente a esta tarea
-		mapArena := sfDacV3.dataPools[len(j.task[i].data)]
+		mapArena := sfDacV3.writeDataPools[len(j.task[i].data)]
 
-		
 		mapArena.delBufferArena(j.task[i].idDataArena)
 	}
 
@@ -49,7 +48,7 @@ func (sfDacV3 *dacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 	}
 
 	// 2. Escribimos en el disco de manera síncrona el bloque del buffer usado
-	
+
 	// Escribimos la secuencia en el bloque de control del buffer (primeros 8 bytes)
 	binary.BigEndian.PutUint64(pool.walBuffersTotal[chooseBuffer][0:8], pool.walSequence)
 	pool.walSequence++

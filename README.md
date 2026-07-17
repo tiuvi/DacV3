@@ -263,9 +263,17 @@ func main() {
 
 para test
 
-sudo mkdir /mnt/ramdisk
+# RAMDisk (1 GB)
+sudo mkdir -p /mnt/ramdisk
 sudo mount -t tmpfs -o size=1G tmpfs /mnt/ramdisk
 sudo chown $USER:$USER /mnt/ramdisk
+
+# Archivo en disco (1 GB)
+sudo mkdir -p /mnt/disk
+sudo fallocate -l 1G /mnt/disk/dbDisk.db
+sudo chown $USER:$USER /mnt/disk/dbDisk.db
+
+
 
 Verifica:
 

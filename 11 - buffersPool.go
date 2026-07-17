@@ -17,6 +17,7 @@ type bufferArena struct {
 func newBufferArena(blocksPerArena uint32, size int64) *bufferArena {
 
 	totalSize := int(int64(blocksPerArena) * size)
+	
 	firstArena := MakeAlignedBlock(totalSize)
 
 	return &bufferArena{

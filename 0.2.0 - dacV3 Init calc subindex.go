@@ -1,7 +1,7 @@
 package dacV3
 
 const BufferAlignSize = 4096 // Tamaño de bloque típico en Linux (ext4/XFS)
-
+const BufferAlignMask = BufferAlignSize - 1
 // 4 bloques fijos de 4096 perdidos para índices
 const IndexOverheadBlocks int64 = 4
 
@@ -16,6 +16,8 @@ type configIndex struct {
 	pageSize int64
 	//offset donde comienzan las paginas
 	pageStartOffset int64
+	//TAmaño del canal
+	IndexSizeChan uint32
 }
 
 // init se ejecuta automáticamente al iniciar el programa, antes que main()

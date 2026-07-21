@@ -327,17 +327,47 @@ Las siguientes pruebas comparan **DacV3** con otros almacenes de clave-valor int
 
 ### Resultados de rendimiento
 
-| Motor | Tiempo total de escritura | Promedio de escrituras/operaciones | Tiempo total de lectura | Promedio de lecturas/operaciones |
-
-| :--- | :--- | :--- | :--- | :--- |
-
-| **DacV3** | **69,28 ms** | **34,64 µs** | **487,10 µs** | **243 ns** |
-
-| Pebble | 19,21 ms | 9,60 µs | 538,23 µs | 269 ns |
-
-| BadgerDB | 967,21 ms | 483,60 µs | 6,54 ms | 3,27 µs |
-
-| bbolt | 2084,10 ms | 1,04 ms | 2,37 ms | 1,18 µs |
+<table>
+  <thead>
+    <tr>
+      <th>Motor</th>
+      <th>Tiempo Total Escritura</th>
+      <th>Promedio Escritura/Op</th>
+      <th>Tiempo Total Lectura</th>
+      <th>Promedio Lectura/Op</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>DacV3</b></td>
+      <td><b>69,28 ms</b></td>
+      <td><b>34,64 µs</b></td>
+      <td><b>487,10 µs</b></td>
+      <td><b>243 ns</b></td>
+    </tr>
+    <tr>
+      <td>Pebble</td>
+      <td>19,21 ms</td>
+      <td>9,60 µs</td>
+      <td>538,23 µs</td>
+      <td>269 ns</td>
+    </tr>
+    <tr>
+      <td>BadgerDB</td>
+      <td>967,21 ms</td>
+      <td>483,60 µs</td>
+      <td>6,54 ms</td>
+      <td>3,27 µs</td>
+    </tr>
+    <tr>
+      <td>bbolt</td>
+      <td>2084,10 ms</td>
+      <td>1,04 ms</td>
+      <td>2,37 ms</td>
+      <td>1,18 µs</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Metodología y paridad
 Para mantener la paridad en todos los motores de almacenamiento probados:

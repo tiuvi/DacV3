@@ -20,7 +20,7 @@ type indexMaster struct {
 	maxMinRelationBlock        int
 }
 
-type dacV3 struct {
+type DacV3 struct {
 	//Gestion del archivo principal
 	mu   sync.Mutex
 	file *os.File
@@ -77,7 +77,7 @@ type SizeConfig struct {
 	NBuffersAvaibleData uint32
 }
 
-func InitDacV3(opts DacV3Options) *dacV3 {
+func InitDacV3(opts DacV3Options) *DacV3 {
 
 	sfDacV3 := openFileDacV3(opts.DacRoute)
 

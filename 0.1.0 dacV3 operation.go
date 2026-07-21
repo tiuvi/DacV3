@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func (sfDacV3 *dacV3) WriteAtSync(data []byte, offset int64) {
+func (sfDacV3 *DacV3) WriteAtSync(data []byte, offset int64) {
 
 	_, err := sfDacV3.file.WriteAt(data, offset)
 	if err != nil {
@@ -28,7 +28,7 @@ func (sfDacV3 *dacV3) WriteAtSync(data []byte, offset int64) {
 
 }
 
-func (sfDacV3 *dacV3) ReadAt(data []byte, offset int64) {
+func (sfDacV3 *DacV3) ReadAt(data []byte, offset int64) {
 
 	_, err := sfDacV3.file.ReadAt(data, offset)
 	if err != nil {
@@ -41,7 +41,7 @@ func (sfDacV3 *dacV3) ReadAt(data []byte, offset int64) {
 	return
 }
 
-func (sfDacV3 *dacV3) WriteAt(data []byte, offset int64) {
+func (sfDacV3 *DacV3) WriteAt(data []byte, offset int64) {
 
 	_, err := sfDacV3.file.WriteAt(data, offset)
 	if err != nil {
@@ -53,14 +53,14 @@ func (sfDacV3 *dacV3) WriteAt(data []byte, offset int64) {
 
 }
 
-func (sf *dacV3) ExpandSize(newSize int64) {
+func (sf *DacV3) ExpandSize(newSize int64) {
 
 	// Fast path sin bloquear (Lock-Free)
 	if newSize <= sf.len.Load() {
 		return
 	}
 	println("nuevo tamaño ", newSize, " viejo tamaño ", sf.len.Load())
-	
+
 	// mode = 0 (Sin KEEP_SIZE) para evitar actualizaciones de inodo en las escrituras posteriores
 	if err := unix.Fallocate(sf.fd, 0, 0, newSize); err != nil {
 
@@ -82,7 +82,7 @@ func (sf *dacV3) ExpandSize(newSize int64) {
 	return
 }
 
-func openFileDacV3(dacRoute string) *dacV3 {
+func openFileDacV3(dacRoute string) *DacV3 {
 
 	fd, err := unix.Open(dacRoute, unix.O_RDWR|unix.O_CREAT|unix.O_DIRECT, 0666)
 	if err != nil {
@@ -90,6 +90,11 @@ func openFileDacV3(dacRoute string) *dacV3 {
 		log.Fatalf("Error al abrir el archivo: %v", err)
 	}
 
+	 
+	if err := unix.Ftruncate(fd, 0); err != nil {
+		log.Fatalf("Error al truncar el archivo: %v", err)
+	}
+	
 	// Convertimos fd (int) a uintptr de manera explícita
 	dacV3Fd := os.NewFile(uintptr(fd), dacRoute)
 
@@ -99,7 +104,7 @@ func openFileDacV3(dacRoute string) *dacV3 {
 		log.Fatalf("Error al abrir el archivo: %v", err)
 	}
 
-	sfDacV3 := &dacV3{
+	sfDacV3 := &DacV3{
 		file: dacV3Fd,
 		fd:   fd,
 	}

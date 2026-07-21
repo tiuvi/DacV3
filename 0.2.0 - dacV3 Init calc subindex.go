@@ -21,7 +21,7 @@ type configIndex struct {
 }
 
 // init se ejecuta automáticamente al iniciar el programa, antes que main()
-func startHandleConfigIndexSize(sfDacV3 *dacV3) {
+func startHandleConfigIndexSize(sfDacV3 *DacV3) {
 
 	sfDacV3.globalSizeSubIndex = make(map[uint32]configIndex)
 

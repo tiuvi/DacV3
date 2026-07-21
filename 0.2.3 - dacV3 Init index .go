@@ -2,7 +2,7 @@ package dacV3
 
 import "log"
 
-func initReadIndex(sfDacV3 *dacV3) {
+func initReadIndex(sfDacV3 *DacV3) {
 
 	// 1. Listar los indices actuales
 	totalBlocks := len(sfDacV3.indexMaster.globalSize) * sfDacV3.opts.SizeIndexMaster
@@ -80,7 +80,7 @@ func initReadIndex(sfDacV3 *dacV3) {
 	}
 }
 
-func processLoadedIndex(sfDacV3 *dacV3, idIndex uint32, sizePagination uint32, hash [32]byte, index *Index) {
+func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, hash [32]byte, index *Index) {
 
 	var emptyHash [32]byte
 	if hash != emptyHash {
@@ -108,7 +108,7 @@ func processLoadedIndex(sfDacV3 *dacV3, idIndex uint32, sizePagination uint32, h
 	}
 }
 
-func startHandleIndex(sfDacV3 *dacV3) {
+func startHandleIndex(sfDacV3 *DacV3) {
 
 	//Inicio donde se guardan los indices
 	sfDacV3.indexLocation = NewPoolArray[Index](1000)

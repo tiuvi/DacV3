@@ -15,7 +15,7 @@ const (
 //TOTAL DE BLOQUES QUE PUEDE ALMACENAR EL ARCHIVO 12 gb
 //const totalIndexBlocks = ((SizeIndexMaster * 8) * (98 * BufferAlignSize)) / Gigabyte
 
-func calcIndexMasterStaticSize(sfDacV3 *dacV3) {
+func calcIndexMasterStaticSize(sfDacV3 *DacV3) {
 
 	// 1. PRIMERO: Calcular las matemáticas (Obligatorio aunque el archivo sea nuevo)
 	sfDacV3.indexMaster.idIndexPhysicalSizePerByte = sfDacV3.indexMaster.blockMinSize.sizeBlock * 8
@@ -27,7 +27,7 @@ func calcIndexMasterStaticSize(sfDacV3 *dacV3) {
 	return
 }
 
-func readIndexMaster(sfDacV3 *dacV3) {
+func readIndexMaster(sfDacV3 *DacV3) {
 
 	if sfDacV3.len.Load() > 0 {
 
@@ -53,7 +53,7 @@ func readIndexMaster(sfDacV3 *dacV3) {
 	return
 }
 
-func initIndexMasterBuffers(sfDacV3 *dacV3) {
+func initIndexMasterBuffers(sfDacV3 *DacV3) {
 
 
 	sfDacV3.indexMaster.walSumBuffersSize = sfDacV3.dacV3WorkerWriter.walSumBuffersSize
@@ -92,7 +92,7 @@ func initIndexMasterBuffers(sfDacV3 *dacV3) {
 	return
 }
 
-func startHandleIndexMaster(sfDacV3 *dacV3) {
+func startHandleIndexMaster(sfDacV3 *DacV3) {
 
 	indexMaster := indexMaster{}
 

@@ -1,6 +1,6 @@
 package dacV3
 
-func startHandleData(sfDacV3 *dacV3) {
+func startHandleData(sfDacV3 *DacV3) {
 
 	sfDacV3.dataPools = make(map[int]*GlobalBufferPool)
 
@@ -29,7 +29,7 @@ func startHandleData(sfDacV3 *dacV3) {
 	initPages(sfDacV3)
 }
 
-func initPages(sfDacV3 *dacV3) {
+func initPages(sfDacV3 *DacV3) {
 
 	// Recorrer completamente indexLocation
 	totalIndexes := sfDacV3.indexLocation.nextID

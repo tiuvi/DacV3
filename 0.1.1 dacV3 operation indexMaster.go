@@ -101,7 +101,7 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 var errServerNotSizeAvaible = errors.New("server not size avaible") 
 var errFileSizeLimitExceeded = errors.New("the file exceeds the server size limit, per file")
 
-func (sfDacV3 *dacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
+func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
 
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()

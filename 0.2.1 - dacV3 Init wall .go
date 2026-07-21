@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-func readWalBuffers(sfDacV3 *dacV3, walsBuffer [][]byte, numOfBuffersWal, walLenControlBlock, walLenIndexBytes, walLenTotalBytes int64) (walSequence uint64) {
+func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLenControlBlock, walLenIndexBytes, walLenTotalBytes int64) (walSequence uint64) {
 
 	fileSize := sfDacV3.len.Load()
 	if fileSize > 0 {
@@ -119,7 +119,7 @@ func readWalBuffers(sfDacV3 *dacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 	return walSequence
 }
 
-func startHandleWallBuffer(sfDacV3 *dacV3) {
+func startHandleWallBuffer(sfDacV3 *DacV3) {
 
 	walLenControlBlock := int64(BufferAlignSize)
 

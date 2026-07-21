@@ -28,7 +28,7 @@ type pageHandle struct {
 	Buf *GlobalBuffer
 }
 
-func (sfDacV3 *dacV3) newPageHandleCreate(hash [32]byte, data []byte, offset int64) (sfIndexHandle *indexHandle, sfPageHandle *pageHandle, err error) {
+func (sfDacV3 *DacV3) newPageHandleCreate(hash [32]byte, data []byte, offset int64) (sfIndexHandle *indexHandle, sfPageHandle *pageHandle, err error) {
 
 	//Creacion unica de pageLocation con bloqueo minimo
 	idPage := sfDacV3.pages.StoreOrGet(hash, func() uint32 {
@@ -121,7 +121,7 @@ func (sfDacV3 *dacV3) newPageHandleCreate(hash [32]byte, data []byte, offset int
 	return sfIndexHandle, sfPageHandle, nil
 }
 
-func (sfDacV3 *dacV3) newPageHandle(hash [32]byte, data []byte, offset int64, create bool) (sfIndexHandle *indexHandle, sfPageHandle *pageHandle, err error) {
+func (sfDacV3 *DacV3) newPageHandle(hash [32]byte, data []byte, offset int64, create bool) (sfIndexHandle *indexHandle, sfPageHandle *pageHandle, err error) {
 
 	idPage, exists := sfDacV3.pages.Get(hash)
 
@@ -205,7 +205,7 @@ func (sfDacV3 *dacV3) newPageHandle(hash [32]byte, data []byte, offset int64, cr
 
 }
 
-func (sfDacV3 *dacV3) WritePage(hash [32]byte, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WritePage(hash [32]byte, data []byte, offset int64) error {
 
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, true)
 	if err != nil {
@@ -220,7 +220,7 @@ func (sfDacV3 *dacV3) WritePage(hash [32]byte, data []byte, offset int64) error 
 	return nil
 }
 
-func (sfDacV3 *dacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64) error {
 	// Llamamos a newPageHandle con create = false.
 	// Él ya se encarga de verificar si existe y de devolvernos errPagedNotFound si no.
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, false)
@@ -234,7 +234,7 @@ func (sfDacV3 *dacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64)
 // writePageData escribe datos en una pagina existente
 // Decide entre WritePageDirect (datos nuevos mas alla de filelen) o WritePageWall (sobreescritura dentro de filelen)
 
-func (sfDacV3 *dacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
 
 	// Obtenemos el tamaño actual del archivo (filelen) de este subíndice
 	fileLen := sfIndex.GetSubIndexSize(int(sfPageHandle.idSubIndex))
@@ -322,7 +322,7 @@ func (sfDacV3 *dacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHand
 	return nil
 }
 
-func (sfDacV3 *dacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
+func (sfDacV3 *DacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
 
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, true)
 	if err != nil {
@@ -332,7 +332,7 @@ func (sfDacV3 *dacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int,
 	return sfDacV3.readPageData(sfIndexHandle, sfPageHandle, data, offset), nil
 }
 
-func (sfDacV3 *dacV3) ReadIfExistPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
+func (sfDacV3 *DacV3) ReadIfExistPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
 	// Llamamos a newPageHandle con create = false.
 	// Él ya se encarga de verificar si existe y de devolvernos errPagedNotFound si no.
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, false)
@@ -343,7 +343,7 @@ func (sfDacV3 *dacV3) ReadIfExistPage(hash [32]byte, data []byte, offset int64) 
 	return sfDacV3.readPageData(sfIndexHandle, sfPageHandle, data, offset), nil
 }
 
-func (sfDacV3 *dacV3) readPageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) (n int) {
+func (sfDacV3 *DacV3) readPageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) (n int) {
 
 	if offset < 0 {
 		return 0

@@ -70,7 +70,7 @@ type dacV3WorkerWriter struct {
 	walBuffersTotal [][]byte
 }
 
-func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
+func (sfDacV3 *DacV3) NewWorkerPool(numWorkers int,
 	queueSize int,
 	walSequence uint64,
 	walLenIndexBytes int64,
@@ -116,7 +116,7 @@ func (sfDacV3 *dacV3) NewWorkerPool(numWorkers int,
 	return
 }
 
-func (sfDacV3 *dacV3) Stop() {
+func (sfDacV3 *DacV3) Stop() {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -127,9 +127,9 @@ func (sfDacV3 *dacV3) Stop() {
 	pool.cancel()
 }
 
-var ErrServerBusy = errors.New("servidor saturado")
+var ErrServerBusy = errors.New("server busy")
 
-func (sfDacV3 *dacV3) worker() {
+func (sfDacV3 *DacV3) worker() {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -190,11 +190,9 @@ func (sfDacV3 *dacV3) worker() {
 
 				pool.mu.Unlock()
 
-				if j.resp != nil {
-					j.resp <- ErrServerBusy
-				}
-
 				j.wg.Done()
+
+				sfDacV3.returnToThePriorityQueue(j)
 
 				continue
 			}
@@ -207,11 +205,9 @@ func (sfDacV3 *dacV3) worker() {
 
 				pool.mu.Unlock()
 
-				if j.resp != nil {
-					j.resp <- ErrServerBusy
-				}
-
 				j.wg.Done()
+
+				sfDacV3.returnToThePriorityQueue(j)
 
 				continue
 			}
@@ -237,11 +233,10 @@ func (sfDacV3 *dacV3) worker() {
 				pool.indexReserve -= totalIndexLen
 
 				pool.mu.Unlock()
-				if j.resp != nil {
-					j.resp <- ErrServerBusy
-				}
 
 				j.wg.Done()
+
+				sfDacV3.returnToThePriorityQueue(j)
 
 				continue
 			}
@@ -274,11 +269,9 @@ func (sfDacV3 *dacV3) worker() {
 
 			pool.mu.Unlock()
 
-			if j.resp != nil {
-				j.resp <- ErrServerBusy
-			}
-
 			j.wg.Done()
+
+			sfDacV3.returnToThePriorityQueue(j)
 
 			continue
 		}
@@ -288,11 +281,9 @@ func (sfDacV3 *dacV3) worker() {
 
 			pool.mu.Unlock()
 
-			if j.resp != nil {
-				j.resp <- ErrServerBusy
-			}
-
 			j.wg.Done()
+
+			sfDacV3.returnToThePriorityQueue(j)
 
 			continue
 		}
@@ -305,11 +296,9 @@ func (sfDacV3 *dacV3) worker() {
 
 			pool.mu.Unlock()
 
-			if j.resp != nil {
-				j.resp <- ErrServerBusy
-			}
-
 			j.wg.Done()
+
+			sfDacV3.returnToThePriorityQueue(j)
 
 			continue
 		}
@@ -345,11 +334,9 @@ func (sfDacV3 *dacV3) worker() {
 
 			pool.mu.Unlock()
 
-			if j.resp != nil {
-				j.resp <- ErrServerBusy
-			}
-
 			j.wg.Done()
+
+			sfDacV3.returnToThePriorityQueue(j)
 
 			continue
 		}
@@ -362,7 +349,7 @@ func (sfDacV3 *dacV3) worker() {
 	}
 }
 
-func (sfDacV3 *dacV3) flusher() {
+func (sfDacV3 *DacV3) flusher() {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -427,7 +414,8 @@ func (sfDacV3 *dacV3) flusher() {
 
 		pool.mu.Unlock()
 
-		println("¿Estamos agrupando writes?" ,len(batch[bufferAEnviarDisco]) )
+		//println("¿Estamos agrupando writes?" ,len(batch[bufferAEnviarDisco]) )
+
 		// 7. Esperamos a que todos los workers terminen de escribir en memoria
 		if len(batch[bufferAEnviarDisco]) > 0 {
 

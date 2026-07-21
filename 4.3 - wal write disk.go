@@ -2,7 +2,7 @@ package dacV3
 
 import "encoding/binary"
 
-func (sfDacV3 *dacV3) processWriteUnSafe(j *jobWriter) {
+func (sfDacV3 *DacV3) processWriteUnSafe(j *jobWriter) {
 
 	// Iteramos sobre cada tarea del lote
 	for i := range j.task {
@@ -24,7 +24,7 @@ func (sfDacV3 *dacV3) processWriteUnSafe(j *jobWriter) {
 
 }
 
-func (sfDacV3 *dacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
+func (sfDacV3 *DacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 
 	pool := sfDacV3.dacV3WorkerWriter
 

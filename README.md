@@ -314,3 +314,35 @@ tamaño total
 1081088
 
 
+
+## Pruebas de rendimiento
+
+Las siguientes pruebas comparan **DacV3** con otros almacenes de clave-valor integrados en Go: **Pebble** (CockroachDB), **BadgerDB** (Dgraph) y **bbolt** (BoltDB).
+
+### Configuración de la prueba
+* **Concurrencia:** 256 trabajadores paralelos (goroutines)
+* **Operaciones:** 2000 escrituras concurrentes seguidas de 2000 lecturas concurrentes
+* **Durabilidad:** Escrituras síncronas (`fsync` habilitado por transacción/operación en todos los motores)
+* **Carga útil:** Claves y valores de cadena corta (~14 bytes por registro)
+
+### Resultados de rendimiento
+
+| Motor | Tiempo total de escritura | Promedio de escrituras/operaciones | Tiempo total de lectura | Promedio de lecturas/operaciones |
+
+| :--- | :--- | :--- | :--- | :--- |
+
+| **DacV3** | **69,28 ms** | **34,64 µs** | **487,10 µs** | **243 ns** |
+
+| Pebble | 19,21 ms | 9,60 µs | 538,23 µs | 269 ns |
+
+| BadgerDB | 967,21 ms | 483,60 µs | 6,54 ms | 3,27 µs |
+
+| bbolt | 2084,10 ms | 1,04 ms | 2,37 ms | 1,18 µs |
+
+### Metodología y paridad
+Para mantener la paridad en todos los motores de almacenamiento probados:
+* **Vacío síncrono:** Todos los motores se configuraron para vaciar las escrituras directamente en el disco (`SyncWrites = true` en BadgerDB, `pebble.Sync` en Pebble y transacciones predeterminadas de un solo escritor en `bbolt`).
+
+* **Aislamiento:** Los temporizadores se iniciaron solo después de que se completara la generación de datos y la configuración del trabajador.
+
+* **Memoria de búfer:** Las operaciones de lectura copian los datos en búferes locales del trabajador preasignados para simular el uso en entornos reales y evitar sesgos en la asignación de memoria.

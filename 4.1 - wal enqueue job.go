@@ -13,7 +13,7 @@ RECUPERACION
 direct no es compatible con Batching
 */
 
-func (sfDacV3 *dacV3) WriteDirect(idDataArena uint32, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteDirect(idDataArena uint32, data []byte, offset int64) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -60,7 +60,7 @@ RECUPERACION
     -si es negativo se copia los datos del wal a la pagina original
 */
 
-func (sfDacV3 *dacV3) WriteWall(idDataArena uint32, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteWall(idDataArena uint32, data []byte, offset int64) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -117,7 +117,7 @@ func newWriterTaskOnce(data []byte, offset int64) jobWriterTask {
 }
 
 // Escritura del wall por lotes
-func (sfDacV3 *dacV3) WriteWallBath(tasks []jobWriterTask) error {
+func (sfDacV3 *DacV3) WriteWallBath(tasks []jobWriterTask) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -146,7 +146,7 @@ func (sfDacV3 *dacV3) WriteWallBath(tasks []jobWriterTask) error {
 ESCRITURA
 1º - Se escribe directamente los datos en el orgigen, esta funcion es de uso exclusivo interno
 */
-func (sfDacV3 *dacV3) WriteUnSafeAsync(jTask *jobWriterTask) {
+func (sfDacV3 *DacV3) WriteUnSafeAsync(jTask *jobWriterTask) {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -187,7 +187,7 @@ func (sfDacV3 *dacV3) WriteUnSafeAsync(jTask *jobWriterTask) {
 ESCRITURA
 1º - Se escribe directamente los datos en el orgigen, esta funcion es de uso exclusivo interno con respuesta
 */
-func (sfDacV3 *dacV3) WriteUnSafeSync(jTask *jobWriterTask) error {
+func (sfDacV3 *DacV3) WriteUnSafeSync(jTask *jobWriterTask) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
@@ -222,7 +222,7 @@ func (sfDacV3 *dacV3) WriteUnSafeSync(jTask *jobWriterTask) error {
 	}
 }
 
-func (sfDacV3 *dacV3) returnToThePriorityQueue(jobWriterItem *jobWriter) {
+func (sfDacV3 *DacV3) returnToThePriorityQueue(jobWriterItem *jobWriter) {
 
 	pool := sfDacV3.dacV3WorkerWriter
 

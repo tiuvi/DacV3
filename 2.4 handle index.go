@@ -7,7 +7,7 @@ import (
 var errIndexCorrupt = errors.New("indice corrupto")
 
 // loadAndVerifyIndexBlock (Helper) Centraliza la lógica de lectura y validación de bloques A/B
-func (sfDacV3 *dacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (uint32, [32]byte, error) {
+func (sfDacV3 *DacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (uint32, [32]byte, error) {
 
 	// Leer y validar Bloque 1
 	sfDacV3.ReadAt(targetBuf, offset)
@@ -48,7 +48,7 @@ func (sfDacV3 *dacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (u
 }
 
 // initIndex Inicializa los índices y todas las páginas de índice
-func (sfDacV3 *dacV3) initIndex(offset int64) (idIndex uint32, sizePagination uint32, hash [32]byte, index *Index, err error) {
+func (sfDacV3 *DacV3) initIndex(offset int64) (idIndex uint32, sizePagination uint32, hash [32]byte, index *Index, err error) {
 
 	idIndex, index = sfDacV3.indexLocation.New()
 
@@ -68,7 +68,7 @@ func (sfDacV3 *dacV3) initIndex(offset int64) (idIndex uint32, sizePagination ui
 
 // LoadIndex Refresca el buffer del índice
 // Nota: Se ha añadido el retorno de 'error' para no fallar silenciosamente si hay corrupción.
-func (sfDacV3 *dacV3) LoadIndex(index *Index) (indexBuffer, error) {
+func (sfDacV3 *DacV3) LoadIndex(index *Index) (indexBuffer, error) {
 
 	index.mu.Lock()
 	defer index.mu.Unlock()
@@ -86,7 +86,7 @@ func (sfDacV3 *dacV3) LoadIndex(index *Index) (indexBuffer, error) {
 	return buf, err // Si no puedes cambiar la firma de la función para devolver error, puedes ignorarlo aquí.
 }
 
-func newIndex(sfDacV3 *dacV3, offset int64, sizePagination uint32) (idIndex uint32) {
+func newIndex(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idIndex uint32) {
 
 	idIndex, index := sfDacV3.indexLocation.New()
 
@@ -113,7 +113,7 @@ func newIndex(sfDacV3 *dacV3, offset int64, sizePagination uint32) (idIndex uint
 	return idIndex
 }
 
-func newIndexSearch(sfDacV3 *dacV3, offset int64, sizePagination uint32) (idIndex uint32) {
+func newIndexSearch(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idIndex uint32) {
 
 	idIndex, index := sfDacV3.indexLocation.New()
 
@@ -148,7 +148,7 @@ func newIndexSearch(sfDacV3 *dacV3, offset int64, sizePagination uint32) (idInde
 	return idIndex
 }
 
-func (sfDacV3 *dacV3) updateIndex(index *Index) {
+func (sfDacV3 *DacV3) updateIndex(index *Index) {
 
 	buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
 
@@ -179,7 +179,7 @@ func (sfDacV3 *dacV3) updateIndex(index *Index) {
 	return
 }
 
-func (sfDacV3 *dacV3) getOffsetPageStart(index *Index, page *Page) int64 {
+func (sfDacV3 *DacV3) getOffsetPageStart(index *Index, page *Page) int64 {
 
 	buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
 
@@ -195,7 +195,7 @@ type indexHandle struct {
 	indexBuffer
 }
 
-func (sfDacV3 *dacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
+func (sfDacV3 *DacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
 
 	index := sfDacV3.indexLocation.Get(idIndex)
 
@@ -213,7 +213,7 @@ func (sfDacV3 *dacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
 
 var ErrNoSpaceAllocated = errors.New("no se pudo asignar espacio tras agotar todos los intentos y tamaños")
 
-func (sfDacV3 *dacV3) CreatePageInIndex(hash [32]byte, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
+func (sfDacV3 *DacV3) CreatePageInIndex(hash [32]byte, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
 
 	// sfDacV3.sortedPoolSizes = [4096, 16384, 32768, 65536]
 	for _, size := range sfDacV3.globalSizeIndex {

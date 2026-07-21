@@ -10,7 +10,7 @@ import (
 -Esta funcion escribe los datos directos en el origen sin validacion de ningun tipo.
 -
 */
-func (sfDacV3 *dacV3) WriteIndex(data []byte, offset int64) {
+func (sfDacV3 *DacV3) WriteIndex(data []byte, offset int64) {
 
 	job := &jobWriterTask{
 		offset:            offset,
@@ -40,7 +40,7 @@ func (sfDacV3 *dacV3) WriteIndex(data []byte, offset int64) {
 /*
 - Escribe los datos usando el wall pero con un buffer propio
 */
-func (sfDacV3 *dacV3) WriteIndexMaster(data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteIndexMaster(data []byte, offset int64) error {
 
 	buffer := MakeAlignedBlock(len(data))
 
@@ -53,7 +53,7 @@ func (sfDacV3 *dacV3) WriteIndexMaster(data []byte, offset int64) error {
 var errArenaNotFound = errors.New("tamaño de arena no encontrado")
 
 /*
-func (sfDacV3 *dacV3) WritePageDirect(data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WritePageDirect(data []byte, offset int64) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
@@ -69,7 +69,7 @@ func (sfDacV3 *dacV3) WritePageDirect(data []byte, offset int64) error {
 }
 
 // En esta parte obtener un buffer de escritura y eliminar idDataarena
-func (sfDacV3 *dacV3) WritePageWall(data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WritePageWall(data []byte, offset int64) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
@@ -88,7 +88,7 @@ func (sfDacV3 *dacV3) WritePageWall(data []byte, offset int64) error {
 // WritePageDirect escribe datos de forma directa utilizando los buffers de la arena.
 // onCopy (opcional) se invoca tan pronto como la copia en memoria finaliza,
 // permitiendo al invocador liberar mutexes u otros bloqueos antes del I/O.
-func (sfDacV3 *dacV3) WritePageDirect(data []byte, offset int64, onCopy func()) error {
+func (sfDacV3 *DacV3) WritePageDirect(data []byte, offset int64, onCopy func()) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
@@ -116,7 +116,7 @@ func (sfDacV3 *dacV3) WritePageDirect(data []byte, offset int64, onCopy func()) 
 	return sfDacV3.WriteDirect(id, buffer, offset)
 }
 
-func (sfDacV3 *dacV3) WritePageWall(data []byte, offset int64, onCopy func()) error {
+func (sfDacV3 *DacV3) WritePageWall(data []byte, offset int64, onCopy func()) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {

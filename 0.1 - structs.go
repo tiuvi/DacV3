@@ -19,6 +19,7 @@ const totalInMb = totalIndexSumData / int64(Megabyte)
 
 type DacV3Options struct {
 	DacRoute               string
+	Truncate bool
 	SizeIndexMaster        int
 	MaxReserveSize         int64
 	SsdNIopsMili           uint32

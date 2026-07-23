@@ -1,6 +1,9 @@
 package dacV3
 
-import "log"
+import (
+	"log"
+	"sync/atomic"
+)
 
 func initReadIndex(sfDacV3 *DacV3) {
 
@@ -16,12 +19,12 @@ func initReadIndex(sfDacV3 *DacV3) {
 		}
 
 		// Leer el primer indice para determinar su configuracion
-		idIndex, sizePagination, hash, index, err := sfDacV3.initIndex(baseOffset)
+		idIndex, sizePagination, hash, slotsFree, index, err := sfDacV3.initIndex(baseOffset)
 		if err != nil {
 			continue
 		}
 
-		processLoadedIndex(sfDacV3, idIndex, sizePagination, hash, index)
+		processLoadedIndex(sfDacV3, idIndex, sizePagination, hash, slotsFree, index)
 
 		sizeBlock := sfDacV3.indexMaster.sizeSubIndex[sizePagination].sizeBlock
 
@@ -35,9 +38,9 @@ func initReadIndex(sfDacV3 *DacV3) {
 
 				offset := baseOffset + j*sizeBlock
 
-				idIdx, szPag, h, idx, e := sfDacV3.initIndex(offset)
+				idIdx, szPag, h, slotsFree, idx, e := sfDacV3.initIndex(offset)
 				if e == nil {
-					processLoadedIndex(sfDacV3, idIdx, szPag, h, idx)
+					processLoadedIndex(sfDacV3, idIdx, szPag, h, slotsFree, idx)
 				}
 
 			}
@@ -53,7 +56,7 @@ func initReadIndex(sfDacV3 *DacV3) {
 		}
 	}
 
-	needed := int(sfDacV3.opts.NChanAvaibleIndexSearch) - len(sfDacV3.indexSearchPool)
+	needed := sfDacV3.needIndexs(int64(sfDacV3.indexMaster.blockMaxSize.pageSize), true)
 	if needed > 0 {
 
 		err := sfDacV3.newIndexs(int64(needed), int64(sfDacV3.indexMaster.blockMaxSize.pageSize), true)
@@ -65,11 +68,7 @@ func initReadIndex(sfDacV3 *DacV3) {
 	// 2. Si no existen indices crear segun los valores
 	for _, item := range sfDacV3.opts.SupportedSizes {
 
-		pool := sfDacV3.indexPools[item.Size]
-
-		// Usar los valores en IndexSizeChan (amplificado * 10)
-		needed := int(item.IndexSizeChan) - len(pool)
-
+		needed = sfDacV3.needIndexs(int64(item.Size), false)
 		if needed > 0 {
 
 			err := sfDacV3.newIndexs(int64(needed), int64(item.Size), false)
@@ -80,7 +79,7 @@ func initReadIndex(sfDacV3 *DacV3) {
 	}
 }
 
-func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, hash [32]byte, index *Index) {
+func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, hash [32]byte, slotsFree int64, index *Index) {
 
 	var emptyHash [32]byte
 	if hash != emptyHash {
@@ -91,17 +90,27 @@ func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, h
 			idLocationBuffer: index.idLocationBuffer,
 		}
 
+		sfDacV3.indexAvailableSlotsSearch.Add(slotsFree)
+
 		select {
-		case sfDacV3.indexSearchPool <- idIndex:
+		case sfDacV3.indexSearchPool <- IndexPoolItem{
+			IDIndex:        idIndex,
+			AvailableSlots: uint8(slotsFree),
+		}:
 		default:
 		}
 
 	} else {
 
+		sfDacV3.indexAvailableSlots[sizePagination].Add(slotsFree)
+
 		// Hay que llenar indexPools con los indices libres
 		if pool, ok := sfDacV3.indexPools[sizePagination]; ok {
 			select {
-			case pool <- idIndex:
+			case pool <- IndexPoolItem{
+				IDIndex:        idIndex,
+				AvailableSlots: uint8(slotsFree),
+			}:
 			default:
 			}
 		}
@@ -116,15 +125,23 @@ func startHandleIndex(sfDacV3 *DacV3) {
 	//Donde se guardan los indices indexados a memoria
 	sfDacV3.indexSearch = make(map[[32]byte]IndexSearch)
 
-	sfDacV3.indexSearchPool = make(chan uint32, sfDacV3.opts.NChanAvaibleIndexSearch)
+	sfDacV3.indexSearchPool = make(chan IndexPoolItem, sfDacV3.opts.NChanAvaibleIndexSearch)
+
+	sfDacV3.indexAvailableSlotsSearch = new(atomic.Int64)
 
 	//Incicio de los buffers para los indices
 	sfDacV3.indexBuffer = newBufferArena(sfDacV3.opts.NBuffersAvailableIndex, BufferAlignSize)
 
-	sfDacV3.indexPools = make(map[uint32]chan uint32)
+	sfDacV3.indexPools = make(map[uint32]chan IndexPoolItem)
+
+	sfDacV3.indexAvailableSlots = make(map[uint32]*atomic.Int64)
+
 	//Inicio de los canales donde se van a guardar los indices
 	for _, item := range sfDacV3.opts.SupportedSizes {
-		sfDacV3.indexPools[item.Size] = make(chan uint32, item.IndexSizeChan*10)
+
+		sfDacV3.indexPools[item.Size] = make(chan IndexPoolItem, item.IndexSizeChan*10)
+
+		sfDacV3.indexAvailableSlots[item.Size] = new(atomic.Int64)
 	}
 
 	initReadIndex(sfDacV3)

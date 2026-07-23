@@ -82,7 +82,7 @@ func (sf *DacV3) ExpandSize(newSize int64) {
 	return
 }
 
-func openFileDacV3(dacRoute string) *DacV3 {
+func openFileDacV3(dacRoute string, truncate bool) *DacV3 {
 
 	fd, err := unix.Open(dacRoute, unix.O_RDWR|unix.O_CREAT|unix.O_DIRECT, 0666)
 	if err != nil {
@@ -90,11 +90,12 @@ func openFileDacV3(dacRoute string) *DacV3 {
 		log.Fatalf("Error al abrir el archivo: %v", err)
 	}
 
-	 
-	if err := unix.Ftruncate(fd, 0); err != nil {
-		log.Fatalf("Error al truncar el archivo: %v", err)
+	if truncate {
+		if err := unix.Ftruncate(fd, 0); err != nil {
+			log.Fatalf("Error al truncar el archivo: %v", err)
+		}
 	}
-	
+
 	// Convertimos fd (int) a uintptr de manera explícita
 	dacV3Fd := os.NewFile(uintptr(fd), dacRoute)
 

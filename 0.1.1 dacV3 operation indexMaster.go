@@ -98,41 +98,69 @@ func (b *indexMaster) GetBytesOff(n int) (id int, found bool) {
 	return 0, false
 }
 
-var errServerNotSizeAvaible = errors.New("server not size avaible") 
+var errServerNotSizeAvaible = errors.New("server not size avaible")
 var errFileSizeLimitExceeded = errors.New("the file exceeds the server size limit, per file")
+
+func (sf *DacV3) newIndexsManagerWorker() {
+	// Recibimos la estructura enviada por el canal
+	for req := range sf.needIndexChan {
+	
+		// Usamos los campos de la estructura recibida
+		sf.newIndexs(1, req.sizePagination, req.isSearch)
+
+	}
+
+}
+
+func (sfDacV3 *DacV3) needIndexs(sizePagination int64, isSearch bool) (needed int) {
+
+	var currentFreeSlots int
+	var targetIndices int
+
+	// 1. Obtenemos las variables según el contexto
+	if isSearch {
+		currentFreeSlots = int(sfDacV3.indexAvailableSlotsSearch.Load())
+		targetIndices = int(sfDacV3.opts.NChanAvaibleIndexSearch)
+	} else {
+		sizeKey := uint32(sizePagination)
+		data := sfDacV3.indexMaster.sizeSubIndex[sizeKey]
+		currentFreeSlots = int(sfDacV3.indexAvailableSlots[sizeKey].Load())
+		targetIndices = int(data.IndexSizeChan)
+	}
+
+	// 2. Capacidad ideal (meta) que deberíamos tener
+	totalTheoreticalSlots := targetIndices * MaxSubIndexPerIndex
+
+	// 3. Si los espacios libres están por encima del 50% de nuestra meta, no hacemos nada.
+	if currentFreeSlots >= (totalTheoreticalSlots / 2) {
+		return 0
+	}
+
+	// 4. Tu fórmula: Restamos a los slots totales y obtenemos los bloques necesarios
+	needed = (totalTheoreticalSlots - currentFreeSlots) / MaxSubIndexPerIndex
+
+	
+	// Safe-guard: si por el redondeo de enteros da 0 pero estamos
+	// por debajo del 50%, pedimos al menos 1 para no quedarnos estancados.
+	if needed <= 0 {
+		return 1
+	}
+
+	return needed
+}
 
 func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
 
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()
 
-	if isSearch {
+	needed := sfDacV3.needIndexs(sizePagination, isSearch)
+	if needed == 0 {
+		return
+	}
 
-		if len(sfDacV3.indexSearchPool) > int(nIndex) {
-			return
-		}
-
-		needed := int(sfDacV3.opts.NChanAvaibleIndexSearch) - len(sfDacV3.indexSearchPool)
-		if needed > int(nIndex) {
-			nIndex = int64(needed)
-		}
-
-	} else {
-
-		//Tamaño del canal declarado
-		data := sfDacV3.indexMaster.sizeSubIndex[uint32(sizePagination)]
-
-		//Tamaño del pool
-		pool := sfDacV3.indexPools[uint32(sizePagination)]
-		if len(pool) > int(nIndex) {
-			return
-		}
-
-		// Usar los valores en IndexSizeChan
-		needed := int(data.IndexSizeChan) - len(pool)
-		if needed > int(nIndex) {
-			nIndex = int64(needed)
-		}
+	if needed > int(nIndex) {
+		nIndex = int64(needed)
 	}
 
 	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
@@ -285,14 +313,25 @@ func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 			idIndex = newIndexSearch(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
 
 			pool := sfDacV3.indexSearchPool
-			pool <- idIndex
+			pool <- IndexPoolItem{
+				IDIndex:        idIndex,
+				AvailableSlots: MaxSubIndexPerIndex,
+			}
+
+			sfDacV3.indexAvailableSlotsSearch.Add(MaxSubIndexPerIndex)
 
 		} else {
 
 			idIndex = newIndex(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
 
 			pool := sfDacV3.indexPools[uint32(sizePagination)]
-			pool <- idIndex
+
+			pool <- IndexPoolItem{
+				IDIndex:        idIndex,
+				AvailableSlots: MaxSubIndexPerIndex,
+			}
+
+			sfDacV3.indexAvailableSlots[uint32(sizePagination)].Add(MaxSubIndexPerIndex)
 		}
 
 	}

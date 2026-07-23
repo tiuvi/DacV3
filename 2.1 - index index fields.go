@@ -95,6 +95,27 @@ func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
 	// Si no hay ningún espacio vacío, devolvemos -1 y false
 	return -1, false
 }
+func (b indexBuffer) CountEmptyIndex() int {
+	
+	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+	count := 0
+
+	// Recorremos los índices desde 0 hasta el límite MaxSubIndexPerIndex
+	for id := 0; id <= MaxSubIndexPerIndex; id++ {
+
+		// Control de seguridad por si el tamaño del slice es menor que MaxSubIndexPerIndex
+		if id >= len(blockSubIndexActive) {
+			break
+		}
+
+		// Si el byte es 0, el espacio está libre y sumamos al contador
+		if blockSubIndexActive[id] == 0 {
+			count++
+		}
+	}
+
+	return count
+}
 
 func (b indexBuffer) GetHashSearch() [32]byte {
 

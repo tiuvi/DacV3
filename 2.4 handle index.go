@@ -48,7 +48,7 @@ func (sfDacV3 *DacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (u
 }
 
 // initIndex Inicializa los índices y todas las páginas de índice
-func (sfDacV3 *DacV3) initIndex(offset int64) (idIndex uint32, sizePagination uint32, hash [32]byte, index *Index, err error) {
+func (sfDacV3 *DacV3) initIndex(offset int64) (idIndex uint32, sizePagination uint32, hash [32]byte, slotsFree int64, index *Index, err error) {
 
 	idIndex, index = sfDacV3.indexLocation.New()
 
@@ -60,10 +60,12 @@ func (sfDacV3 *DacV3) initIndex(offset int64) (idIndex uint32, sizePagination ui
 
 	sizePagination, hash, err = sfDacV3.loadAndVerifyIndexBlock(offset, buf)
 	if err != nil {
-		return 0, 0, [32]byte{}, nil, err
+		return 0, 0, [32]byte{}, 0, nil, err
 	}
 
-	return idIndex, sizePagination, hash, index, nil
+	slotsFree = int64(indexBuffer(buf).CountEmptyIndex())
+
+	return idIndex, sizePagination, hash, slotsFree, index, nil
 }
 
 // LoadIndex Refresca el buffer del índice
@@ -213,69 +215,185 @@ func (sfDacV3 *DacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
 
 var ErrNoSpaceAllocated = errors.New("no se pudo asignar espacio tras agotar todos los intentos y tamaños")
 
-func (sfDacV3 *DacV3) CreatePageInIndex(hash [32]byte, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
+func (sfDacV3 *DacV3) GetSizeForIndex(requiredSpace uint32) (size uint32) {
 
-	// sfDacV3.sortedPoolSizes = [4096, 16384, 32768, 65536]
 	for _, size := range sfDacV3.globalSizeIndex {
 
 		if size < requiredSpace {
 			continue
 		}
 
-		pool := sfDacV3.indexPools[size]
-		success := false
+		return size
+	}
 
-		for intento := 0; intento < 10; intento++ {
+	return 0
+}
 
-			select {
+func (sfDacV3 *DacV3) CreatePageInIndex(hash [32]byte, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
 
-			case idIndex := <-pool:
+	size := sfDacV3.GetSizeForIndex(requiredSpace)
+	if size == 0 {
+		return nil, 0, 0, ErrNoSpaceAllocated
+	}
 
-				sfIndexHandle, err = sfDacV3.newIndexHandle(idIndex)
-				if err != nil {
-					// Aquí sí usamos fmt.Errorf para añadir contexto dinámico (el idIndex)
-					return nil, 0, 0, err
-				}
+	pool := sfDacV3.indexPools[size]
+	success := false
 
-				sfIndexHandle.mu.Lock()
-				
-				id, found := sfIndexHandle.GetFirstEmptyIndex()
-				if !found {
-					// El índice está lleno.
-					sfIndexHandle.mu.Unlock()
-					continue
-				}
+	for intento := 0; intento < 100; intento++ {
 
-				// ¡Éxito!
-				// Se invierte el orden para asegurar happens-before sobre idSubIndex
-				newIdSubIndex = uint8(id)
-				newIdIndex = idIndex
+		select {
 
-				sfIndexHandle.SetIndexKept(id)
-				sfIndexHandle.setSubIndex(hash, id)
-				sfIndexHandle.mu.Unlock()
+		case idIndex := <-pool:
 
+			if idIndex.AvailableSlots == 0 {
+
+				continue
+
+			} else {
+
+				idIndex.AvailableSlots = idIndex.AvailableSlots - 1
 				pool <- idIndex
 
-				success = true
-
-			default:
-				// El canal está vacío, creamos 1 índice nuevo
-				err = sfDacV3.newIndexs(1, int64(size), false)
-				if err != nil {
-					return nil, 0, 0, err
-				}
 			}
 
-			if success {
-				break
+			sfDacV3.indexAvailableSlots[size].Add(-1)
+
+			//Cada vez que globalmente nos gastemos un indice mandamos un aviso
+			if sfDacV3.indexAvailableSlots[size].Load()%MaxSubIndexPerIndex == 0 {
+
+				sfDacV3.needIndexChan <- newIndexRequest{
+					sizePagination: int64(size),
+					isSearch:       false,
+				}
+
+			}
+
+			sfIndexHandle, err = sfDacV3.newIndexHandle(idIndex.IDIndex)
+			if err != nil {
+				// Aquí sí usamos fmt.Errorf para añadir contexto dinámico (el idIndex)
+				return nil, 0, 0, err
+			}
+
+			sfIndexHandle.mu.Lock()
+
+			id, found := sfIndexHandle.GetFirstEmptyIndex()
+			if !found {
+				sfIndexHandle.mu.Unlock()
+				continue
+			}
+
+			newIdSubIndex = uint8(id)
+
+			newIdIndex = idIndex.IDIndex
+
+			sfIndexHandle.SetSubIndexSequence(id, 0)
+
+			sfIndexHandle.setSubIndex(hash, id)
+
+			sfIndexHandle.mu.Unlock()
+
+			success = true
+
+		default:
+
+			//Este bloqueo es lento no interesa que se agrupoen aqui las gorutinas
+			err = sfDacV3.newIndexs(1, int64(size), false)
+			if err != nil {
+				return nil, 0, 0, err
+			}
+
+		}
+
+		if success {
+			break
+		}
+
+	}
+
+	if success {
+		// Lo logramos para este tamaño, salimos del bucle
+		return sfIndexHandle, newIdIndex, newIdSubIndex, nil
+	}
+
+	// RETORNAMOS LA VARIABLE GLOBAL DE ERROR
+	return nil, 0, 0, ErrNoSpaceAllocated
+}
+
+// Funcion para obtener el siguiente indice
+func (sfDacV3 *DacV3) UpdatePageInIndex(sfIndexHandleCurrent *indexHandle, idSubIndexCurrent uint8, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
+
+	println("Esto no tiene que funcionar todavia....")
+	size := sfDacV3.GetSizeForIndex(requiredSpace)
+	if size == 0 {
+		return nil, 0, 0, ErrNoSpaceAllocated
+	}
+
+	pool := sfDacV3.indexPools[size]
+	success := false
+
+	for intento := 0; intento < 10; intento++ {
+
+		select {
+
+		case idIndex := <-pool:
+
+			//Una vez que obtenenemos el indice no lo necesitamos lo enviamos al pool.
+			//FAlta hacer un bloqueo para el buffer y otro para la escritura de indice.
+			pool <- idIndex
+
+			sfIndexHandle, err = sfDacV3.newIndexHandle(idIndex.IDIndex)
+			if err != nil {
+				// Aquí sí usamos fmt.Errorf para añadir contexto dinámico (el idIndex)
+				return nil, 0, 0, err
+			}
+
+			sfIndexHandle.mu.Lock()
+
+			id, found := sfIndexHandle.GetFirstEmptyIndex()
+			if !found {
+				// El índice está lleno.
+				sfIndexHandle.mu.Unlock()
+				continue
+			}
+
+			// ¡Éxito!
+			// Se invierte el orden para asegurar happens-before sobre idSubIndex
+			newIdSubIndex = uint8(id)
+
+			newIdIndex = idIndex.IDIndex
+
+			// Obtenemos el hash del índice antiguo de forma segura
+			sfIndexHandleCurrent.mu.Lock()
+			hash := sfIndexHandleCurrent.GetSubIndexHash(int(idSubIndexCurrent))
+			sequence := sfIndexHandleCurrent.GetSubIndexSequence(int(idSubIndexCurrent))
+			sfIndexHandleCurrent.mu.Unlock()
+
+			sfIndexHandle.SetSubIndexSequence(id, sequence+1)
+
+			sfIndexHandle.setSubIndex(hash, id)
+
+			sfIndexHandle.mu.Unlock()
+
+			success = true
+
+		default:
+			//Hace falta un atomico para que cuente los indices disponibles
+			//Si el atomico esta por encima de los indices que puede a ver entonces no crear indices y esperar.
+			// El canal está vacío, creamos 1 índice nuevo
+			err = sfDacV3.newIndexs(1, int64(size), false)
+			if err != nil {
+				return nil, 0, 0, err
 			}
 		}
 
 		if success {
-			// Lo logramos para este tamaño, salimos del bucle
-			return sfIndexHandle, newIdIndex, newIdSubIndex, nil
+			break
 		}
+	}
+
+	if success {
+		// Lo logramos para este tamaño, salimos del bucle
+		return sfIndexHandle, newIdIndex, newIdSubIndex, nil
 	}
 
 	// RETORNAMOS LA VARIABLE GLOBAL DE ERROR

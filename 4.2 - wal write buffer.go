@@ -60,7 +60,7 @@ func SetCheckSum(index []byte, data []byte) {
 	checksum := crc32.Checksum(data, castagnoliTable)
 
 	// Guardamos el checksum en el espacio [0:4] definido por las constantes
-	binary.BigEndian.PutUint32(index[field_WalCheckSumInit:field_WalCheckSumEnd], checksum)
+	binary.LittleEndian.PutUint32(index[field_WalCheckSumInit:field_WalCheckSumEnd], checksum)
 
 }
 
@@ -68,7 +68,7 @@ func SetCheckSum(index []byte, data []byte) {
 func GetCheckSum(index []byte, data []byte) error {
 
 	// Leer el checksum guardado en el espacio [0:4]
-	savedChecksum := binary.BigEndian.Uint32(index[field_WalCheckSumInit:field_WalCheckSumEnd])
+	savedChecksum := binary.LittleEndian.Uint32(index[field_WalCheckSumInit:field_WalCheckSumEnd])
 
 	// Calcular el checksum de los datos reales que tenemos
 	calculatedChecksum := crc32.Checksum(data, castagnoliTable)
@@ -86,10 +86,10 @@ func GetCheckSum(index []byte, data []byte) error {
 func SetOffsetData(init int64, end int64, index []byte) error {
 
 	// 1. Guardar 'init' en los bytes [4:12]
-	binary.BigEndian.PutUint64(index[field_OffsetData_Init_Init:field_OffsetData_Init_End], uint64(init))
+	binary.LittleEndian.PutUint64(index[field_OffsetData_Init_Init:field_OffsetData_Init_End], uint64(init))
 
 	// 2. Guardar 'end' en los bytes [12:20]
-	binary.BigEndian.PutUint64(index[field_OffsetData_End_Init:field_OffsetData_End_End], uint64(end))
+	binary.LittleEndian.PutUint64(index[field_OffsetData_End_Init:field_OffsetData_End_End], uint64(end))
 
 	return nil
 }
@@ -98,10 +98,10 @@ func SetOffsetData(init int64, end int64, index []byte) error {
 func GetOffsetData(index []byte) (int64, int64, error) {
 
 	// Leer 'init' de los bytes [4:12]
-	init := int64(binary.BigEndian.Uint64(index[field_OffsetData_Init_Init:field_OffsetData_Init_End]))
+	init := int64(binary.LittleEndian.Uint64(index[field_OffsetData_Init_Init:field_OffsetData_Init_End]))
 
 	// Leer 'end' de los bytes [12:20]
-	end := int64(binary.BigEndian.Uint64(index[field_OffsetData_End_Init:field_OffsetData_End_End]))
+	end := int64(binary.LittleEndian.Uint64(index[field_OffsetData_End_Init:field_OffsetData_End_End]))
 
 	return init, end, nil
 }
@@ -109,10 +109,10 @@ func GetOffsetData(index []byte) (int64, int64, error) {
 func SetOffsetWalData(init int64, end int64, index []byte) error {
 
 	// 1. Guardar 'init' en los bytes [4:12]
-	binary.BigEndian.PutUint64(index[field_OffsetWalData_Init_Init:field_OffsetWalData_Init_End], uint64(init))
+	binary.LittleEndian.PutUint64(index[field_OffsetWalData_Init_Init:field_OffsetWalData_Init_End], uint64(init))
 
 	// 2. Guardar 'end' en los bytes [12:20]
-	binary.BigEndian.PutUint64(index[field_OffsetWalData_End_Init:field_OffsetWalData_End_End], uint64(end))
+	binary.LittleEndian.PutUint64(index[field_OffsetWalData_End_Init:field_OffsetWalData_End_End], uint64(end))
 
 	return nil
 }
@@ -120,10 +120,10 @@ func SetOffsetWalData(init int64, end int64, index []byte) error {
 func GetOffsetWalData(index []byte) (int64, int64, error) {
 
 	// Leer 'init' de los bytes [4:12]
-	init := int64(binary.BigEndian.Uint64(index[field_OffsetWalData_Init_Init:field_OffsetWalData_Init_End]))
+	init := int64(binary.LittleEndian.Uint64(index[field_OffsetWalData_Init_Init:field_OffsetWalData_Init_End]))
 
 	// Leer 'end' de los bytes [12:20]
-	end := int64(binary.BigEndian.Uint64(index[field_OffsetWalData_End_Init:field_OffsetWalData_End_End]))
+	end := int64(binary.LittleEndian.Uint64(index[field_OffsetWalData_End_Init:field_OffsetWalData_End_End]))
 
 	return init, end, nil
 }

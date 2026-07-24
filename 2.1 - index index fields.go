@@ -15,18 +15,18 @@ func (b indexBuffer) SetCheckSum() {
 	checksum := b.CalCheckSum()
 
 	// Guardamos el checksum en el espacio [0:4] definido por las constantes
-	binary.BigEndian.PutUint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd], checksum)
+	binary.LittleEndian.PutUint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd], checksum)
 }
 
 // GetCheckSum lee el checksum guardado en index
 func (b indexBuffer) GetCheckSum() uint32 {
 	// Leer el checksum guardado en el espacio [0:4]
-	return binary.BigEndian.Uint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd])
+	return binary.LittleEndian.Uint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd])
 }
 
 // SetSequence asigna la secuencia (8 bytes) en la posición correspondiente
 func (b indexBuffer) SetSequence(seq int64) {
-	binary.BigEndian.PutUint64(b[field_IndexSequenceInit:field_IndexSequenceEnd], uint64(seq))
+	binary.LittleEndian.PutUint64(b[field_IndexSequenceInit:field_IndexSequenceEnd], uint64(seq))
 }
 
 func (b indexBuffer) GetSequence() int64 {
@@ -35,12 +35,12 @@ func (b indexBuffer) GetSequence() int64 {
 
 // SetSizePagination define el tamaño de la página en múltiplos de 4 (escribe 4 bytes)
 func (b indexBuffer) SetSizePagination(size uint32) {
-	binary.BigEndian.PutUint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd], size)
+	binary.LittleEndian.PutUint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd], size)
 }
 
 // GetSizePagination obtiene el tamaño de la página (lee 4 bytes)
 func (b indexBuffer) GetSizePagination() uint32 {
-	return binary.BigEndian.Uint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
+	return binary.LittleEndian.Uint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
 }
 
 func (b indexBuffer) SetIndexKept(id int) {

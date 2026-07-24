@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/tiuvi/DacV3" // Asegúrate de que esta importación sea correcta
+	"dacV3" // Asegúrate de que esta importación sea correcta
 )
 
 var textWrite = `Hola mundo`

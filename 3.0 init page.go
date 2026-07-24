@@ -1,5 +1,6 @@
 package dacV3
 
+//ESTA FUNCION ESTA MAL DEBUGEAR MIENTRAS DEBUGEO LOS WRITES
 // Inicia todas las paginas de un indice, añadie su id y posicion al mapa de datos pero no el buffer
 // Si el indice es indexSearch no se inicia
 func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
@@ -30,7 +31,7 @@ func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 		size := bufIndex.GetSubIndexSize(i)
 		if size == 0 {
 
-			bufIndex.unSetSubIndex(i)
+			bufIndex.unSetSubIndexHash(i)
 			needsUpdate = true
 			continue
 		}

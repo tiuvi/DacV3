@@ -248,7 +248,7 @@ func main() {
 
 	for i := 0; i < totalEntradas; i++ {
 		var key [32]byte
-		binary.BigEndian.PutUint64(key[0:8], uint64(i))
+		binary.LittleEndian.PutUint64(key[0:8], uint64(i))
 		files[key] = i
 	}
 

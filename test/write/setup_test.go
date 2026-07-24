@@ -53,7 +53,24 @@ dir="/mnt/ramdisk/" interaction="10" GOMAXPROCS=128 go test ./test/bench -bench=
 
 dir="/mnt/ramdisk/" interaction="10" GOMAXPROCS=128 go test ./test/bench -bench=^BenchmarkDacV3_WriteConcurrent$ -benchtime=10x
 
+//Test para comprobar la creacion de indices y nuevas paginas
 dir="/mnt/ramdisk/" interaction="1313" GOMAXPROCS=128 go test ./test/write -run=^TestDacV3_WriteConcurrentWal$ -v -race
+
+
+//Test para comproba el crecimiento de un archivo
+dir="/mnt/ramdisk/" interaction="100" go test ./test/write -run=^TestDacV3_SingleGrowingPage_LineByLine$ -v
+
+
+
+Crash cuando se reservo un indice en memoria, deben ser retirados en initpages
+clear && crashType=2 dir="/mnt/ramdisk/" interaction="100" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+
+Antes de cambiar los indices cuando el archivo aumenta de tamaño
+clear && crashType=3 dir="/mnt/ramdisk/" interaction="100" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+
+Crash cuando se va hacer el intercambio de indices
+clear && crashType=4 dir="/mnt/ramdisk/" interaction="100" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+
 
 */
 

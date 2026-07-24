@@ -50,7 +50,7 @@ func (sfDacV3 *DacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 	// 2. Escribimos en el disco de manera síncrona el bloque del buffer usado
 
 	// Escribimos la secuencia en el bloque de control del buffer (primeros 8 bytes)
-	binary.BigEndian.PutUint64(pool.walBuffersTotal[chooseBuffer][0:8], pool.walSequence)
+	binary.LittleEndian.PutUint64(pool.walBuffersTotal[chooseBuffer][0:8], pool.walSequence)
 	pool.walSequence++
 
 	dataToWrite := pool.walBuffersTotal[chooseBuffer][:totalDataSize]

@@ -32,7 +32,7 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 			buf := allWalData[start:end]
 
 			//Leemos la secuencia del wal
-			seq := binary.BigEndian.Uint64(buf[0:8])
+			seq := binary.LittleEndian.Uint64(buf[0:8])
 
 			infos = append(infos, walBufferInfo{index: i, seq: seq})
 

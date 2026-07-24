@@ -104,7 +104,7 @@ var errFileSizeLimitExceeded = errors.New("the file exceeds the server size limi
 func (sf *DacV3) newIndexsManagerWorker() {
 	// Recibimos la estructura enviada por el canal
 	for req := range sf.needIndexChan {
-	
+
 		// Usamos los campos de la estructura recibida
 		sf.newIndexs(1, req.sizePagination, req.isSearch)
 
@@ -131,15 +131,16 @@ func (sfDacV3 *DacV3) needIndexs(sizePagination int64, isSearch bool) (needed in
 	// 2. Capacidad ideal (meta) que deberíamos tener
 	totalTheoreticalSlots := targetIndices * MaxSubIndexPerIndex
 
+	minPercentaje := (totalTheoreticalSlots * sfDacV3.opts.minPercentajeTotalSlotsCreate) / 100
+
 	// 3. Si los espacios libres están por encima del 50% de nuestra meta, no hacemos nada.
-	if currentFreeSlots >= (totalTheoreticalSlots / 2) {
+	if currentFreeSlots >= minPercentaje {
 		return 0
 	}
 
 	// 4. Tu fórmula: Restamos a los slots totales y obtenemos los bloques necesarios
 	needed = (totalTheoreticalSlots - currentFreeSlots) / MaxSubIndexPerIndex
 
-	
 	// Safe-guard: si por el redondeo de enteros da 0 pero estamos
 	// por debajo del 50%, pedimos al menos 1 para no quedarnos estancados.
 	if needed <= 0 {
@@ -149,38 +150,22 @@ func (sfDacV3 *DacV3) needIndexs(sizePagination int64, isSearch bool) (needed in
 	return needed
 }
 
-func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
-
-	sfDacV3.mu.Lock()
-	defer sfDacV3.mu.Unlock()
-
-	needed := sfDacV3.needIndexs(sizePagination, isSearch)
-	if needed == 0 {
-		return
-	}
-
-	if needed > int(nIndex) {
-		nIndex = int64(needed)
-	}
-
-	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
+// calculateBulkAllocation calcula los bytes y el número total de índices necesarios
+// utilizando el Mínimo Común Múltiplo para asegurar el alineamiento perfecto.
+func (sfDacV3 *DacV3) calculateMinBytesIndex(nIndex int64, sizePagination int64) (manyBytes int, totalIndex int, err error) {
 
 	// 1. Tamaño que representa 1 BIT (e.g. 4096 bytes)
 	baseUnitSize := int64(sfDacV3.indexMaster.blockMinSize.pageSize)
 
 	// 2. Validación de que es múltiplo
 	if sizePagination%baseUnitSize != 0 {
-		return errors.New("tamaño de pagina no compatible")
+		return 0, 0, errors.New("tamaño de pagina no compatible")
 	}
 
 	relationWithMinBlock := sizePagination / baseUnitSize
 
 	// Calculamos cuántos bloques mínimos caben en el bloque máximo (ej. 64k / 4k = 16 bits)
 	maxMinRelation := sfDacV3.indexMaster.maxMinRelationBlock
-
-	// 3. TU BUCLE OPTIMIZADO (Bulk Allocation Math)
-	manyBytes := 0
-	totalIndex := 0
 
 	// Empezamos en 1 para evitar que el 0 de un falso positivo inmediato
 	for ind := 1; ; ind++ {
@@ -217,7 +202,33 @@ func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 
 	if manyBytes > sfDacV3.indexMaster.opts.SizeIndexMaster {
 		//Error aqui excede la capacidad por segmento, no se pueden optener bytes de varios segmentos diferentes.
-		return errFileSizeLimitExceeded
+		return 0, 0, errFileSizeLimitExceeded
+	}
+
+	return manyBytes, totalIndex, nil
+}
+
+func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch bool) (err error) {
+
+	sfDacV3.mu.Lock()
+	defer sfDacV3.mu.Unlock()
+
+	needed := sfDacV3.needIndexs(sizePagination, isSearch)
+	if needed == 0 {
+		return
+	}
+
+	if needed > int(nIndex) {
+		nIndex = int64(needed)
+	}
+
+	println("Se necesitan nuevos indices: ", nIndex, "Tamaño: ", sizePagination, "search: ", isSearch)
+
+	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
+
+	manyBytes, totalIndex, err := sfDacV3.calculateMinBytesIndex(nIndex, sizePagination)
+	if err != nil {
+		return err
 	}
 
 	// 4. Buscar espacio libre en el mapa (manyBytes)

@@ -119,13 +119,14 @@ func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, h
 
 func startHandleIndex(sfDacV3 *DacV3) {
 
+
 	//Inicio donde se guardan los indices
 	sfDacV3.indexLocation = NewPoolArray[Index](1000)
 
 	//Donde se guardan los indices indexados a memoria
 	sfDacV3.indexSearch = make(map[[32]byte]IndexSearch)
 
-	sfDacV3.indexSearchPool = make(chan IndexPoolItem, sfDacV3.opts.NChanAvaibleIndexSearch)
+	sfDacV3.indexSearchPool = make(chan IndexPoolItem, sfDacV3.opts.NChanAvaibleIndexSearch*sfDacV3.opts.queueChanMultiplier)
 
 	sfDacV3.indexAvailableSlotsSearch = new(atomic.Int64)
 
@@ -139,7 +140,7 @@ func startHandleIndex(sfDacV3 *DacV3) {
 	//Inicio de los canales donde se van a guardar los indices
 	for _, item := range sfDacV3.opts.SupportedSizes {
 
-		sfDacV3.indexPools[item.Size] = make(chan IndexPoolItem, item.IndexSizeChan*10)
+		sfDacV3.indexPools[item.Size] = make(chan IndexPoolItem, item.IndexSizeChan*sfDacV3.opts.queueChanMultiplier)
 
 		sfDacV3.indexAvailableSlots[item.Size] = new(atomic.Int64)
 	}

@@ -5,36 +5,15 @@ import (
 	"errors"
 )
 
-func (b indexBuffer) newSubIndex(hash [32]byte) (id int, found bool) {
 
-	id, found = b.GetFirstEmptyIndex()
-	if !found {
-		return
-	}
-
-	b.SetIndexKept(id)
-
-	// Obtenemos el segmento de la página destinado a los subíndices
-	zoneSubIndex := b[field_subIndexInit:]
-
-	// Calculamos el desplazamiento inicial para este subíndice en particular
-	offsetIndex := id * sizeSubIndex
-
-	// Copiamos los 32 bytes del hash en la posición calculada
-	// zoneSubIndex[offsetIndex : offsetIndex+32] delimita el espacio exacto de 32 bytes
-	copy(zoneSubIndex[offsetIndex:offsetIndex+32], hash[:])
-	return
-}
 
 // Funciones para subindices
-func (b indexBuffer) setSubIndex(hash [32]byte, id int) {
+func (b indexBuffer) setSubIndexHash(hash [32]byte, id int) {
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return
 	}
-
-	b.SetIndexKept(id)
 
 	// Obtenemos el segmento de la página destinado a los subíndices
 	zoneSubIndex := b[field_subIndexInit:]
@@ -47,14 +26,12 @@ func (b indexBuffer) setSubIndex(hash [32]byte, id int) {
 	copy(zoneSubIndex[offsetIndex:offsetIndex+32], hash[:])
 }
 
-func (b indexBuffer) unSetSubIndex(id int) {
+func (b indexBuffer) unSetSubIndexHash(id int) {
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return
 	}
-
-	b.UnSetIndexKept(id)
 
 	// Obtenemos el segmento de la página destinado a los subíndices
 	zoneSubIndex := b[field_subIndexInit:]
@@ -96,7 +73,7 @@ func (b indexBuffer) SetSubIndexSize(id int, size int64) {
 	offsetIndex := id * sizeSubIndex
 
 	// El Size ocupa desde el byte 32 al 40 relativos a este subíndice
-	binary.BigEndian.PutUint64(zoneSubIndex[offsetIndex+subIndex_Size_Init:offsetIndex+subIndex_Size_End], uint64(size))
+	binary.LittleEndian.PutUint64(zoneSubIndex[offsetIndex+subIndex_Size_Init:offsetIndex+subIndex_Size_End], uint64(size))
 }
 
 func (b indexBuffer) GetSubIndexSize(id int) int64 {
@@ -108,7 +85,7 @@ func (b indexBuffer) GetSubIndexSize(id int) int64 {
 	offsetIndex := id * sizeSubIndex
 
 	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
-	val := binary.BigEndian.Uint64(zoneSubIndex[offsetIndex+subIndex_Size_Init : offsetIndex+subIndex_Size_End])
+	val := binary.LittleEndian.Uint64(zoneSubIndex[offsetIndex+subIndex_Size_Init : offsetIndex+subIndex_Size_End])
 	return int64(val)
 }
 
@@ -123,7 +100,7 @@ func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido:
 
 	// Corregido: Actualizado el comentario para que tenga sentido
 	// La Secuencia ocupa los bytes correspondientes relativos a este subíndice
-	binary.BigEndian.PutUint64(
+	binary.LittleEndian.PutUint64(
 		zoneSubIndex[offsetIndex+subIndexSequence_Init:offsetIndex+subIndexSequence_End],
 		uint64(sequence),
 	)
@@ -138,7 +115,7 @@ func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
 	offsetIndex := id * sizeSubIndex
 
 	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
-	val := binary.BigEndian.Uint64(
+	val := binary.LittleEndian.Uint64(
 		zoneSubIndex[offsetIndex+subIndexSequence_Init : offsetIndex+subIndexSequence_End],
 	)
 	return int64(val)

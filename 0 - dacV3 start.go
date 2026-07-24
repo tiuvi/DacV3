@@ -110,13 +110,16 @@ func NewDacV3Options(diskPath string, truncate bool, multiplierChan uint32) DacV
 		NChanAvaibleIndexSearch:          1 * multiplierChan,
 		NBuffersAvailableIndexSearchData: MaxSubIndexPerIndex * multiplierChan,
 
+		queueChanMultiplier:100,
+		minPercentajeTotalSlotsCreate: 10,
+
 		//Indices soportados
 		SupportedSizes: []SizeConfig{
 			{
 				//tamaño del indice
 				Size:                4096,
 				//Cuantos indices de este tamaños estan disponibles
-				IndexSizeChan:       4 * multiplierChan,
+				IndexSizeChan:       16 * multiplierChan,
 				//Cuantos buffer de datos de este tamaño estan disponibles
 				NBuffersAvaibleData: MaxSubIndexPerIndex * 16,
 			},

@@ -25,6 +25,9 @@ type DacV3Options struct {
 	SsdNIopsMili           uint32
 	NBuffersAvailableIndex uint32
 
+	queueChanMultiplier uint32
+	minPercentajeTotalSlotsCreate int
+
 	NChanAvaibleIndexSearch      uint32
 	NBuffersAvailableIndexSearch uint32
 

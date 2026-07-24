@@ -234,152 +234,6 @@ func (sfDacV3 *DacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64)
 // writePageData escribe datos en una pagina existente
 // Decide entre WritePageDirect (datos nuevos mas alla de filelen) o WritePageWall (sobreescritura dentro de filelen)
 
-func (sfDacV3 *DacV3) writePageDataSwapIndex(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
-
-	dataEnd := offset + int64(len(data))
-
-	sfPageHandle.mu.Lock()
-	//Bloqueamos buffer antiguo para hacer cambio de buffer
-	oldBuf := sfPageHandle.Buf
-	oldBuf.mu.Lock()
-
-	newIndex, newIdIndex, newIdSubIndex, err := sfDacV3.UpdatePageInIndex(sfIndex, sfPageHandle.idSubIndex, uint32(dataEnd))
-	if err != nil {
-		oldBuf.mu.Unlock()
-		sfPageHandle.mu.Unlock()
-		return err
-	}
-
-	// ¡CRÍTICO! El sub-índice DEBE asignarse ANTES del atomic.Store.
-	sfPageHandle.idSubIndex = newIdSubIndex
-
-	atomic.StoreUint32(&sfPageHandle.idIndex, newIdIndex)
-
-	sizePagination := newIndex.GetSizePagination()
-
-	arena := sfDacV3.dataPools[int(sizePagination)]
-
-	newIdBuffer, newBuf := arena.New()
-
-	//Copiamos antiguo buffer al nuevo
-	newBuf.CopyAt(0, oldBuf.buf)
-
-	//Escribimos datos en el NUEVO buffer
-	newBuf.CopyAt(offset, data)
-	
-	sfPageHandle.Buf = newBuf
-
-	oldIdBuffer := atomic.LoadUint32(&sfPageHandle.idBuffer)
-	atomic.StoreUint32(&sfPageHandle.idBuffer, newIdBuffer)
-
-	oldBuf.mu.Unlock()
-
-	sfPageHandle.mu.Unlock()
-
-	// Liberamos el buffer antiguo
-	oldArena := sfDacV3.dataPools[int(sfIndex.GetSizePagination())]
-	oldArena.Free(oldIdBuffer)
-
-	// Estoy hay que hacerlo con el nuevo indice
-	pageStartOffset := sfDacV3.getOffsetPageStart(newIndex.Index, sfPageHandle.Page)
-
-	sfPageHandle.mu.Lock()
-	err = sfDacV3.WritePageDirect(data, pageStartOffset, func() {
-		sfPageHandle.mu.Unlock()
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sfDacV3 *DacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
-
-	// Tamaño de los datos a escribir
-	dataEnd := offset + int64(len(data))
-
-	if dataEnd > int64(sfIndex.GetSizePagination()) {
-
-		return sfDacV3.writePageDataSwapIndex(sfIndex, sfPageHandle, data, offset)
-	}
-
-	// Obtenemos el tamaño actual del archivo (filelen) de este subíndice
-	fileLen := sfIndex.GetSubIndexSize(int(sfPageHandle.idSubIndex))
-
-	// Calculamos el offset absoluto donde comienzan los datos de esta página en disco
-	pageStartOffset := sfDacV3.getOffsetPageStart(sfIndex.Index, sfPageHandle.Page)
-
-	// 1. Calculamos las fronteras alineadas a 4K relativas al buffer
-	// Redondeo hacia abajo al múltiplo de 4096 más cercano
-	start4K := offset &^ BufferAlignMask
-
-	// Redondeo hacia arriba al múltiplo de 4096 más cercano
-	end4K := (dataEnd + BufferAlignMask) &^ BufferAlignMask
-
-	// 2. Calculamos el offset absoluto alineado a 4K para enviar a disco
-	absoluteAlignedOffset := pageStartOffset + start4K
-
-	// 3. Escribimos en el buffer en memoria
-	sfPageHandle.Buf.mu.Lock()
-
-	// IMPORTANTE: CopyAt devuelve un error (ej. Overflow), debemos capturarlo
-	err := sfPageHandle.Buf.CopyAt(offset, data)
-	if err != nil {
-		sfPageHandle.Buf.mu.Unlock()
-		return err
-	}
-
-	// Prevenimos un panic si end4K supera la capacidad real del buffer asignado en el Pool
-	if end4K > int64(len(sfPageHandle.Buf.buf)) {
-		end4K = int64(len(sfPageHandle.Buf.buf))
-	}
-
-	// 4. CREAMOS LA VISTA (Slice) ALINEADA A 4K
-	// Esto no copia memoria, solo crea un slice que apunta a las páginas afectadas
-	alignedDataView := sfPageHandle.Buf.buf[start4K:end4K]
-
-	sfPageHandle.Buf.mu.Unlock()
-
-	// 5. Decidimos qué método de escritura en disco usar
-	if start4K >= fileLen {
-
-		// ESCRITURA DIRECTA (Append)
-		sfPageHandle.mu.Lock()
-
-		// Enviamos el slice alineado a 4K y el offset absoluto alineado a 4K
-		err = sfDacV3.WritePageDirect(alignedDataView, absoluteAlignedOffset, func() {
-			sfPageHandle.mu.Unlock()
-		})
-		if err != nil {
-			return err
-		}
-
-	} else {
-
-		// ESCRITURA WALL (Update/Sobrescritura)
-		sfPageHandle.mu.Lock()
-
-		// Enviamos el slice alineado a 4K y el offset absoluto alineado a 4K
-		err = sfDacV3.WritePageWall(alignedDataView, absoluteAlignedOffset, func() {
-			sfPageHandle.mu.Unlock()
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	// 6. Actualizar el filelen si los datos escritos extienden el tamaño
-	if dataEnd > fileLen {
-		sfIndex.mu.Lock()
-		sfIndex.SetSubIndexSize(int(sfPageHandle.idSubIndex), dataEnd)
-		sfDacV3.updateIndex(sfIndex.Index)
-		sfIndex.mu.Unlock()
-	}
-
-	return nil
-}
-
 func (sfDacV3 *DacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
 
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, true)
@@ -390,7 +244,7 @@ func (sfDacV3 *DacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int,
 	return sfDacV3.readPageData(sfIndexHandle, sfPageHandle, data, offset), nil
 }
 
-func (sfDacV3 *DacV3) ReadIfExistPage(hash [32]byte, data []byte, offset int64) (n int, err error) {
+func (sfDacV3 *DacV3) ReadPageIfExist(hash [32]byte, data []byte, offset int64) (n int, err error) {
 	// Llamamos a newPageHandle con create = false.
 	// Él ya se encarga de verificar si existe y de devolvernos errPagedNotFound si no.
 	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, data, offset, false)
@@ -432,3 +286,4 @@ func (sfDacV3 *DacV3) readPageData(sfIndex *indexHandle, sfPageHandle *pageHandl
 
 	return copied
 }
+

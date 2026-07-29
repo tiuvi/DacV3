@@ -174,6 +174,21 @@ func (sfDacV3 *DacV3) updateIndex(index *Index) {
 		targetOffset += BufferAlignSize
 	}
 
+	if TestCrashEnergy == CrashWriteIndexCorrupt {
+		
+		for ind := 0; ind <= MaxSubIndexPerIndex; ind++ {
+			
+			bufIndex.unSetSubIndexHash(ind)
+			bufIndex.SetSubIndexSequence(ind, 0)
+			bufIndex.SetSubIndexSize(ind, 0)
+
+		}
+
+		sfDacV3.WriteIndex(buf, targetOffset)
+
+		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWriteIndexCorrupt")
+	}
+
 	// Escribimos en el bloque alternado que corresponda
 	// (Asegúrate de que sfDacV3.WriteIndex devuelva un error en tu código real para poder retornarlo)
 	sfDacV3.WriteIndex(buf, targetOffset)
@@ -228,4 +243,3 @@ func (sfDacV3 *DacV3) GetSizeForIndex(requiredSpace uint32) (size uint32) {
 
 	return 0
 }
-

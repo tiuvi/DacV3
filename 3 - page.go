@@ -212,7 +212,7 @@ func (sfDacV3 *DacV3) WritePage(hash [32]byte, data []byte, offset int64) error 
 		return err // Si no existe, devolverá tu errPagedNotFound
 	}
 
-	err = sfDacV3.writePageData(sfIndexHandle, sfPageHandle, data, offset)
+	err = sfDacV3.writePageData(hash , sfIndexHandle, sfPageHandle, data, offset)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (sfDacV3 *DacV3) WriteIfExistPage(hash [32]byte, data []byte, offset int64)
 		return err // Si no existe, devolverá tu errPagedNotFound
 	}
 
-	return sfDacV3.writePageData(sfIndexHandle, sfPageHandle, data, offset)
+	return sfDacV3.writePageData(hash , sfIndexHandle, sfPageHandle, data, offset)
 }
 
 // writePageData escribe datos en una pagina existente
@@ -242,6 +242,16 @@ func (sfDacV3 *DacV3) ReadPage(hash [32]byte, data []byte, offset int64) (n int,
 	}
 
 	return sfDacV3.readPageData(sfIndexHandle, sfPageHandle, data, offset), nil
+}
+
+func (sfDacV3 *DacV3) Size(hash [32]byte) (size int64, err error) {
+
+	sfIndexHandle, sfPageHandle, err := sfDacV3.newPageHandle(hash, nil, 0, true)
+	if err != nil {
+		return 0, err // Si no existe, devolverá tu errPagedNotFound
+	}
+
+	return sfIndexHandle.GetSubIndexSize(int(sfPageHandle.idSubIndex)) , nil
 }
 
 func (sfDacV3 *DacV3) ReadPageIfExist(hash [32]byte, data []byte, offset int64) (n int, err error) {

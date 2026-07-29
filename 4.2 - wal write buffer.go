@@ -9,8 +9,8 @@ import (
 var castagnoliTable = crc32.MakeTable(crc32.Castagnoli)
 
 const (
-	field_WalCheckSumInit = 0
-	field_WalCheckSumEnd  = 4
+	field_WalIndexCheckSumInit = 0
+	field_WalIndexCheckSumEnd  = 4
 
 	field_TypeIndexWallInit = 4
 	field_TypeIndexWallEnd  = 5
@@ -26,6 +26,18 @@ const (
 
 	field_OffsetWalData_End_Init = 29
 	field_OffsetWalData_End_End  = 37
+
+	field_Hash_Init = 37
+	field_Hash_End  = 69
+
+	field_RelativeOffset_Init = 69
+	field_RelativeOffset_End  = 77
+
+	field_DataLen_Init = 77
+	field_DataLen_End  = 85
+
+	field_WalCheckSumInit = 85
+	field_WalCheckSumEnd  = 89
 )
 
 type IndexWallType byte
@@ -37,19 +49,17 @@ const (
 	WallModifyType IndexWallType = 2
 )
 
-// SetTypeIndexWall escribe el tipo de Wall en la primera posición del index
-func SetTypeIndexWall(typeIndex IndexWallType, index []byte) error {
+// SetTypeIndexWall escribe el tipo de Wall en la posición correspondiente (offset 4)
+func SetTypeIndexWall(typeIndex IndexWallType, index []byte) {
 
-	// Almacenamos el tipo personalizado convirtiéndolo a byte estándar
-	index[0] = byte(typeIndex)
-	return nil
+	index[field_TypeIndexWallInit] = byte(typeIndex)
+	return
 }
 
-// GetTypeIndexWall lee la primera posición del index y la retorna como IndexWallType
-func GetTypeIndexWall(index []byte) (IndexWallType, error) {
+// GetTypeIndexWall lee la posición correspondiente (offset 4) y la retorna como IndexWallType
+func GetTypeIndexWall(index []byte) IndexWallType {
 
-	// Leemos el byte y lo convertimos a nuestro tipo personalizado
-	return IndexWallType(index[0]), nil
+	return IndexWallType(index[field_TypeIndexWallInit])
 }
 
 var ErrCorruptedData = errors.New("el checksum no coincide")
@@ -74,6 +84,28 @@ func GetCheckSum(index []byte, data []byte) error {
 	calculatedChecksum := crc32.Checksum(data, castagnoliTable)
 
 	// Comparar ambos valores
+	if savedChecksum != calculatedChecksum {
+		return ErrCorruptedData
+	}
+
+	return nil
+}
+
+// SetCheckSumIndex calcula el checksum de los metadatos del índice y lo escribe
+func SetCheckSumIndex(index []byte) {
+
+	checksum := crc32.Checksum(index[field_WalIndexCheckSumEnd:], castagnoliTable)
+
+	binary.LittleEndian.PutUint32(index[field_WalIndexCheckSumInit:field_WalIndexCheckSumEnd], checksum)
+}
+
+// GetCheckSumIndex lee el checksum del índice y verifica su integridad
+func GetCheckSumIndex(index []byte) error {
+
+	savedChecksum := binary.LittleEndian.Uint32(index[field_WalIndexCheckSumInit:field_WalIndexCheckSumEnd])
+
+	calculatedChecksum := crc32.Checksum(index[field_WalIndexCheckSumEnd:], castagnoliTable)
+
 	if savedChecksum != calculatedChecksum {
 		return ErrCorruptedData
 	}
@@ -128,8 +160,36 @@ func GetOffsetWalData(index []byte) (int64, int64, error) {
 	return init, end, nil
 }
 
+func SetHashWallData(hash [32]byte, index []byte) {
+	copy(index[field_Hash_Init:field_Hash_End], hash[:])
+	return
+}
+
+func GetHashWallData(index []byte) [32]byte {
+	var hash [32]byte
+	copy(hash[:], index[field_Hash_Init:field_Hash_End])
+	return hash
+}
+
+func SetRelativeOffsetWall(offset int64, index []byte) {
+	binary.LittleEndian.PutUint64(index[field_RelativeOffset_Init:field_RelativeOffset_End], uint64(offset))
+}
+
+func GetRelativeOffsetWall(index []byte) int64 {
+	return int64(binary.LittleEndian.Uint64(index[field_RelativeOffset_Init:field_RelativeOffset_End]))
+}
+
+func SetDataLenWall(dataLen int64, index []byte) {
+	binary.LittleEndian.PutUint64(index[field_DataLen_Init:field_DataLen_End], uint64(dataLen))
+}
+
+func GetDataLenWall(index []byte) int64 {
+	return int64(binary.LittleEndian.Uint64(index[field_DataLen_Init:field_DataLen_End]))
+}
+
 func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 
+	
 	walBuffersTotal := pool.walBuffersTotal[j.bufIdx]
 
 	//Direct escribe solamente un checksum con los datos
@@ -150,6 +210,13 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 
 			SetOffsetData(offsetStart, offsetEnd, indexView)
 
+			SetHashWallData(j.task[i].hash, indexView)
+
+			SetRelativeOffsetWall(j.task[i].relativeOffset, indexView)
+
+			SetDataLenWall(j.task[i].dataLen, indexView)
+
+			SetCheckSumIndex(indexView)
 		}
 
 		return
@@ -175,6 +242,14 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 
 		// 4. Guardamos en el índice en qué parte del WAL están los datos reales
 		SetOffsetWalData(t.dataOffsetStart, t.dataOffsetEnd, indexView)
+
+		// 4.5. Guardamos el hash de los datos en el índice
+		SetHashWallData(t.hash, indexView)
+
+		SetRelativeOffsetWall(t.relativeOffset, indexView)
+		SetDataLenWall(t.dataLen, indexView)
+		
+		SetCheckSumIndex(indexView)
 
 		// 5. Copiamos los DATOS REALES de la tarea a su zona en el buffer global
 		// (Esta copia es necesaria y ya está optimizada, va directa al destino final)

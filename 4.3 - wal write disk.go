@@ -1,11 +1,29 @@
 package dacV3
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"runtime"
+)
 
 func (sfDacV3 *DacV3) processWriteUnSafe(j *jobWriter) {
 
 	// Iteramos sobre cada tarea del lote
 	for i := range j.task {
+
+		if TestCrashEnergy == CrashWriteUnsafeCorrupt {
+
+			clear(j.task[i].data[:30])
+
+			// 2. Escribimos solo la mitad para simular el Torn Write
+			sfDacV3.WriteAt(j.task[i].data, j.task[i].offset)
+
+			// 3. ¡Le avisamos al hilo principal que ya hicimos el daño!
+			TestCrashEnergiChan <- true
+
+			// 4. Matamos el worker silenciosamente
+			runtime.Goexit()
+
+		}
 
 		// 1. Escribimos la data de la tarea en su offset original en disco
 		sfDacV3.WriteAt(j.task[i].data, j.task[i].offset)
@@ -24,6 +42,32 @@ func (sfDacV3 *DacV3) processWriteUnSafe(j *jobWriter) {
 
 }
 
+type bufWalControl []byte
+
+const (
+	// Offsets para la Secuencia (8 bytes)
+	control_SequenceInit = 0
+	control_SequenceEnd  = 8
+)
+
+// SetSequence escribe la secuencia uint64 en los primeros 8 bytes del bloque de control
+func (c bufWalControl) SetSequence(seq uint64) {
+
+	binary.LittleEndian.PutUint64(c[control_SequenceInit:control_SequenceEnd], seq)
+}
+
+// GetSequence lee la secuencia uint64 de los primeros 8 bytes del bloque de control
+func (c bufWalControl) GetSequence() uint64 {
+
+	return binary.LittleEndian.Uint64(c[control_SequenceInit:control_SequenceEnd])
+}
+
+// IsValid comprueba si el buffer es válido (secuencia >= 1)
+func (c bufWalControl) IsEmpty() bool {
+
+	return c.GetSequence() == 0
+}
+
 func (sfDacV3 *DacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 
 	pool := sfDacV3.dacV3WorkerWriter
@@ -35,14 +79,38 @@ func (sfDacV3 *DacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 	// 1. Calculamos el tamaño máximo ocupado en el buffer
 	// Debemos buscar el mayor dataOffsetEnd entre todas las tareas de todos los jobs
 	var totalDataSize int64
+
 	for _, j := range batch {
 
 		for i := range j.task {
 			if j.task[i].dataOffsetEnd > totalDataSize {
+
 				totalDataSize = j.task[i].dataOffsetEnd
+
+				if TestCrashEnergy == CrashWriteWallCorrupt {
+
+					println("datos wal: ", string(pool.walBuffersTotal[chooseBuffer][j.task[i].dataOffsetStart:j.task[i].dataOffsetEnd]))
+					view := pool.walBuffersTotal[chooseBuffer][j.task[i].dataOffsetStart:j.task[i].dataOffsetEnd]
+					clear(view[32:])
+					println("datos wal: ", string(pool.walBuffersTotal[chooseBuffer][j.task[i].dataOffsetStart:j.task[i].dataOffsetEnd]))
+				}
+
+				if TestCrashEnergy == CrashWriteWallIndexCorrupt {
+					println("Creando un error en un indice de wal")
+					view := pool.walBuffersTotal[chooseBuffer][j.task[i].indexOffsetStart:j.task[i].indexOffsetEnd]
+					clear(view[37:69])
+				}
 			}
+
 			if j.task[i].indexOffsetEnd > totalDataSize {
+
 				totalDataSize = j.task[i].indexOffsetEnd
+
+				if TestCrashEnergy == CrashWriteWallIndexCorrupt {
+					println("Creando un error en un indice de wal2")
+					view := pool.walBuffersTotal[chooseBuffer][j.task[i].indexOffsetStart:j.task[i].indexOffsetEnd]
+					clear(view[37:69])
+				}
 			}
 		}
 	}
@@ -50,12 +118,32 @@ func (sfDacV3 *DacV3) processWriteDisk(batch []*jobWriter, chooseBuffer int) {
 	// 2. Escribimos en el disco de manera síncrona el bloque del buffer usado
 
 	// Escribimos la secuencia en el bloque de control del buffer (primeros 8 bytes)
-	binary.LittleEndian.PutUint64(pool.walBuffersTotal[chooseBuffer][0:8], pool.walSequence)
+	bufWalControl(pool.walBuffersTotal[chooseBuffer]).SetSequence(pool.walSequence)
+
 	pool.walSequence++
 
 	dataToWrite := pool.walBuffersTotal[chooseBuffer][:totalDataSize]
 
 	offsetWrite := int64(chooseBuffer) * pool.walLenTotalBytes
+
+	if TestCrashEnergy == CrashWriteWallCorrupt || TestCrashEnergy == CrashWriteWallIndexCorrupt {
+
+		// 2. Escribimos solo la mitad para simular el Torn Write
+		sfDacV3.WriteAtSync(dataToWrite, offsetWrite)
+
+		for _, j := range batch {
+
+			// Liberamos al cliente que hizo la petición síncrona (el canal está en el jobWriter padre)
+			if j.resp != nil {
+				j.resp <- nil
+				close(j.resp)
+			}
+		}
+
+		// 4. Matamos el worker silenciosamente
+		runtime.Goexit()
+
+	}
 
 	sfDacV3.WriteAtSync(dataToWrite, offsetWrite)
 

@@ -79,3 +79,11 @@ func (m *ConcurrentMap[V]) StoreOrGet(key [32]byte, allocator func() V) V {
 
 	return newVal
 }
+
+func (m *ConcurrentMap[V]) Clear() {
+	for _, shard := range m.shards {
+		shard.Lock()
+		clear(shard.data)
+		shard.Unlock()
+	}
+}

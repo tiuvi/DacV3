@@ -108,3 +108,31 @@ func (p *PagedPool[T]) Delete(id uint32) {
 	// Agregamos el ID de vuelta al pool de libres
 	p.freeIDs = append(p.freeIDs, id)
 }
+
+func (p *PagedPool[T]) Clear() {
+	
+	p.globalLock.Lock()
+	defer p.globalLock.Unlock()
+
+	// 1. Asignamos el valor 'Zero' a todos los elementos existentes
+	// Esto es crucial para que el Garbage Collector pueda liberar 
+	// la memoria si T contiene punteros, slices o mapas.
+	var zero T
+	for i := range p.chunks {
+		for j := range p.chunks[i] {
+			p.chunks[i][j] = zero
+		}
+	}
+
+	// 2. Conservamos solo el primer chunk (como hace NewPoolArray)
+	if len(p.chunks) > 0 {
+		p.chunks = p.chunks[:1]
+	} else {
+		// Por si acaso llegara a estar vacío
+		p.chunks = append(p.chunks, make([]T, p.chunkSize))
+	}
+
+	// 3. Reseteamos los IDs disponibles y el secuenciador
+	p.freeIDs = p.freeIDs[:0] // Mantiene la capacidad reservada previamente
+	p.nextID = 0
+}

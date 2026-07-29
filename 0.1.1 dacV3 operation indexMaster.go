@@ -222,7 +222,7 @@ func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 		nIndex = int64(needed)
 	}
 
-	println("Se necesitan nuevos indices: ", nIndex, "Tamaño: ", sizePagination, "search: ", isSearch)
+	//println("Se necesitan nuevos indices: ", nIndex, "Tamaño: ", sizePagination, "search: ", isSearch)
 
 	walSumBuffersSize := sfDacV3.dacV3WorkerWriter.walSumBuffersSize
 

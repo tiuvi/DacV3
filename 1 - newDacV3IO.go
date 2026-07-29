@@ -40,55 +40,24 @@ func (sfDacV3 *DacV3) WriteIndex(data []byte, offset int64) {
 /*
 - Escribe los datos usando el wall pero con un buffer propio
 */
+var hashZero [32]byte
+
 func (sfDacV3 *DacV3) WriteIndexMaster(data []byte, offset int64) error {
 
 	buffer := MakeAlignedBlock(len(data))
 
 	copy(buffer, data)
 
-	return sfDacV3.WriteWall(0, buffer, offset)
+	return sfDacV3.WriteWall(hashZero, 0, 0, 0, buffer, offset)
 
 }
 
 var errArenaNotFound = errors.New("tamaño de arena no encontrado")
 
-/*
-func (sfDacV3 *DacV3) WritePageDirect(data []byte, offset int64) error {
-
-	arena, found := sfDacV3.writeDataPools[len(data)]
-	if !found {
-		return errArenaNotFound
-	}
-
-	id, buffer := arena.addBufferArena()
-
-	copy(buffer, data)
-
-	return sfDacV3.WriteDirect(id, buffer, offset)
-
-}
-
-// En esta parte obtener un buffer de escritura y eliminar idDataarena
-func (sfDacV3 *DacV3) WritePageWall(data []byte, offset int64) error {
-
-	arena, found := sfDacV3.writeDataPools[len(data)]
-	if !found {
-		return errArenaNotFound
-	}
-
-	id, buffer := arena.addBufferArena()
-
-	copy(buffer, data)
-
-	return sfDacV3.WriteWall(id, buffer, offset)
-
-}
-*/
-
 // WritePageDirect escribe datos de forma directa utilizando los buffers de la arena.
 // onCopy (opcional) se invoca tan pronto como la copia en memoria finaliza,
 // permitiendo al invocador liberar mutexes u otros bloqueos antes del I/O.
-func (sfDacV3 *DacV3) WritePageDirect(data []byte, offset int64, onCopy func()) error {
+func (sfDacV3 *DacV3) WritePageDirect(hash [32]byte, relativeOffset int64,dataLen int64, data []byte, offset int64, onCopy func()) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
@@ -106,17 +75,17 @@ func (sfDacV3 *DacV3) WritePageDirect(data []byte, offset int64, onCopy func()) 
 	// 2. Realizamos la copia de los bytes de forma rápida en memoria
 	copy(buffer, data)
 
-	// 3. Notificamos al invocador que los datos ya están en nuestro dominio 
+	// 3. Notificamos al invocador que los datos ya están en nuestro dominio
 	// para que pueda liberar sus Mutex o reciclar 'data'.
 	if onCopy != nil {
 		onCopy()
 	}
 
 	// 4. Procedemos con la escritura directa a disco (potencial bloqueo por I/O)
-	return sfDacV3.WriteDirect(id, buffer, offset)
+	return sfDacV3.WriteDirect(hash, relativeOffset,dataLen, id, buffer, offset)
 }
 
-func (sfDacV3 *DacV3) WritePageWall(data []byte, offset int64, onCopy func()) error {
+func (sfDacV3 *DacV3) WritePageWall(hash [32]byte, relativeOffset int64, dataLen int64, data []byte, offset int64, onCopy func()) error {
 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
@@ -140,5 +109,5 @@ func (sfDacV3 *DacV3) WritePageWall(data []byte, offset int64, onCopy func()) er
 
 	// 4. Escribimos al disco/WAL (Lento - I/O Blocking)
 	// Aquí ya no retenemos los locks de la capa superior.
-	return sfDacV3.WriteWall(id, buffer, offset)
+	return sfDacV3.WriteWall(hash, relativeOffset, dataLen, id, buffer, offset)
 }

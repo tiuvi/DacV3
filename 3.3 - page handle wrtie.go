@@ -1,15 +1,7 @@
 package dacV3
 
 import (
-	"sync/atomic"
-)
-
-var TestCrashEnergy int64
-
-const (
-	CrashBeforeDiskWrite = 2
-	CrashAfterDiskWrite  = 3
-	CrashDuringIndexSwap = 4
+	"bytes"
 )
 
 func (sfDacV3 *DacV3) CheckIndexPageFromHash(hash [32]byte) (err error) {
@@ -38,104 +30,54 @@ func (sfDacV3 *DacV3) CheckIndexPage(sfIndexHandle *indexHandle, sfPageHandle *p
 
 	hashArray := sfIndexHandle.GetSubIndexHash(int(sfPageHandle.idSubIndex))
 	// 2. Ya le puedes hacer el slice [:] y convertirlo a string
-	println("hash: ", UUIDToString(hashArray))
+	println("hash page: ", UUIDToString(hashArray))
 
 	println("index SizePagination: ", sfIndexHandle.GetSizePagination())
+	println("index hash: ", UUIDToString(sfIndexHandle.GetHashSearch()))
 	println("Index checksum ", sfIndexHandle.GetCheckSum())
 	println("Sequence: ", sfIndexHandle.GetSequence())
 
-	println("Buffer: \n", string(sfPageHandle.Buf.buf))
-	return
+	trimmed := bytes.TrimRight(sfPageHandle.Buf.buf, "\x00")
+
+	// 2. Definimos cuánto miden 3 líneas (3 x 64 bytes = 192 bytes)
+	bytesUltimasLineas := 3 * 64
+
+	var ultimas3Lineas string
+
+	// 3. Comprobamos que haya al menos 192 bytes escritos
+	if len(trimmed) >= bytesUltimasLineas {
+		// Tomamos desde (LongitudTotal - 192) hasta el Final
+		ultimas3Lineas = string(trimmed[len(trimmed)-bytesUltimasLineas:])
+	} else {
+		// Si la página tiene menos de 3 líneas, tomamos todo lo que haya
+		ultimas3Lineas = string(trimmed)
+	}
+
+	println("Buffer: \n", ultimas3Lineas)
+
+	//println("buffer completo: \n", string(sfPageHandle.Buf.buf))
 }
 
-func (sfDacV3 *DacV3) writePageDataSwapIndex(sfIndexOld *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
 
-	sfDacV3.CheckIndexPage(sfIndexOld, sfPageHandle)
 
-	dataEnd := offset + int64(len(data))
+func (sfDacV3 *DacV3) writePageData(hash [32]byte, sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
 
-	sfPageHandle.mu.Lock()
-	//Bloqueamos buffer antiguo para hacer cambio de buffer
-	oldBuf := sfPageHandle.Buf
-	oldBuf.mu.Lock()
-
-	//Primeramente obtenemos un indice nuevo reservado, solo en memoria
-	sfIndexNew, newIdIndex, newIdSubIndex, err := sfDacV3.UpdatePageInIndex(sfPageHandle.idSubIndex, uint32(dataEnd))
-	if err != nil {
-		oldBuf.mu.Unlock()
-		sfPageHandle.mu.Unlock()
-		return err
-	}
-
-	oldIndexSubIndex := sfPageHandle.idSubIndex
-	// ¡CRÍTICO! El sub-índice DEBE asignarse ANTES del atomic.Store.
-	sfPageHandle.idSubIndex = newIdSubIndex
-
-	//Asignamos el nuevo indice a la pagina
-	atomic.StoreUint32(&sfPageHandle.idIndex, newIdIndex)
-
-	sizePagination := sfIndexNew.GetSizePagination()
-
-	arena := sfDacV3.dataPools[int(sizePagination)]
-
-	newIdBuffer, newBuf := arena.New()
-
-	//Copiamos antiguo buffer al nuevo
-	newBuf.CopyAt(0, oldBuf.buf)
-
-	//Escribimos datos en el NUEVO buffer
-	newBuf.CopyAt(offset, data)
-
-	sfPageHandle.Buf = newBuf
-
-	oldIdBuffer := atomic.LoadUint32(&sfPageHandle.idBuffer)
-
-	atomic.StoreUint32(&sfPageHandle.idBuffer, newIdBuffer)
-
-	oldBuf.mu.Unlock()
-
-	// Liberamos el buffer antiguo
-	oldArena := sfDacV3.dataPools[int(sfIndexOld.GetSizePagination())]
-
-	oldArena.Free(oldIdBuffer)
-
-	// Estoy hay que hacerlo con el nuevo indice
-	pageStartOffset := sfDacV3.getOffsetPageStart(sfIndexNew.Index, sfPageHandle.Page)
-
-	if TestCrashEnergy == CrashBeforeDiskWrite {
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashBeforeDiskWrite")
-	}
-
-	err = sfDacV3.WritePageDirect(newBuf.buf, pageStartOffset, func() {
-
-		sfPageHandle.mu.Unlock()
-	})
-	if err != nil {
-		return err
-	}
-
-	sfDacV3.CheckIndexPage(sfIndexNew, sfPageHandle)
-
-	if TestCrashEnergy == CrashAfterDiskWrite {
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashAfterDiskWrite")
-	}
-
-	sfDacV3.SwapIndexDirection(sfIndexOld, oldIndexSubIndex, sfIndexNew, newIdSubIndex, dataEnd)
-
-	println("SE termina de ejecutar la ampliacion")
-	return nil
-}
-
-func (sfDacV3 *DacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
-
+	dataLen := int64(len(data))
 	// Tamaño de los datos a escribir
-	dataEnd := offset + int64(len(data))
+	dataEnd := offset + dataLen
+
+	//Si el tamaño supera el tamaño maximo de bloque.
+	if dataEnd > sfDacV3.indexMaster.blockMaxSize.pageSize {
+
+		//la clave para saber esto es si el tamaño es menor que el tamaño maximo, todavai no se ha configurado
+		//la pagina de indices si el tamaño es mayor ya se configuro
+		//sfIndex.GetSubIndexSize(int(sfPageHandle.idIndex))
+		println("no configurado")
+	}
 
 	if dataEnd > int64(sfIndex.GetSizePagination()) {
 
-		println("El archivo supera: ", sfIndex.GetSizePagination())
-
-		return sfDacV3.writePageDataSwapIndex(sfIndex, sfPageHandle, data, offset)
+		return sfDacV3.writePageDataSwapIndex(sfIndex, sfPageHandle, hash, data,dataLen, offset)
 	}
 
 	// Obtenemos el tamaño actual del archivo (filelen) de este subíndice
@@ -175,41 +117,11 @@ func (sfDacV3 *DacV3) writePageData(sfIndex *indexHandle, sfPageHandle *pageHand
 
 	sfPageHandle.Buf.mu.Unlock()
 
-	// 5. Decidimos qué método de escritura en disco usar
 	if start4K >= fileLen {
 
-		// ESCRITURA DIRECTA (Append)
-		sfPageHandle.mu.Lock()
-
-		// Enviamos el slice alineado a 4K y el offset absoluto alineado a 4K
-		err = sfDacV3.WritePageDirect(alignedDataView, absoluteAlignedOffset, func() {
-			sfPageHandle.mu.Unlock()
-		})
-		if err != nil {
-			return err
-		}
-
-	} else {
-
-		// ESCRITURA WALL (Update/Sobrescritura)
-		sfPageHandle.mu.Lock()
-
-		// Enviamos el slice alineado a 4K y el offset absoluto alineado a 4K
-		err = sfDacV3.WritePageWall(alignedDataView, absoluteAlignedOffset, func() {
-			sfPageHandle.mu.Unlock()
-		})
-		if err != nil {
-			return err
-		}
+		return sfDacV3.writePageDirectData(sfIndex, dataEnd, fileLen, sfPageHandle, hash, offset, dataLen, alignedDataView, absoluteAlignedOffset)
 	}
 
-	// 6. Actualizar el filelen si los datos escritos extienden el tamaño
-	if dataEnd > fileLen {
-		sfIndex.mu.Lock()
-		sfIndex.SetSubIndexSize(int(sfPageHandle.idSubIndex), dataEnd)
-		sfDacV3.updateIndex(sfIndex.Index)
-		sfIndex.mu.Unlock()
-	}
+	return sfDacV3.writePageWalData(sfIndex, dataEnd, fileLen, sfPageHandle, hash, offset, dataLen, alignedDataView, absoluteAlignedOffset)
 
-	return nil
 }

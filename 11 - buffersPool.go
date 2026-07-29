@@ -121,3 +121,29 @@ func (ib *bufferArena) delBufferArena(id uint32) {
 	ib.freeIDs = append(ib.freeIDs, internalID)
 	ib.isFree[internalID] = true
 }
+
+func (ib *bufferArena) Clear() {
+	ib.mu.Lock()
+	defer ib.mu.Unlock()
+
+	if len(ib.arenas) > 0 {
+		// Ponemos a cero (bytes en 0) el primer bloque de memoria
+		clear(ib.arenas[0])
+		// Descartamos los demás bloques para liberar memoria RAM
+		ib.arenas = ib.arenas[:1]
+	}
+
+	// Reseteamos el slice de IDs libres conservando su capacidad
+	ib.freeIDs = ib.freeIDs[:0]
+	ib.nextID = 0
+
+	// Reducimos el mapa de ocupación (isFree) al tamaño original
+	if len(ib.isFree) > int(ib.blocksPerArena) {
+		ib.isFree = ib.isFree[:ib.blocksPerArena]
+	}
+	
+	// Marcamos todo como "no libre" (estado por defecto según tu constructor)
+	for i := range ib.isFree {
+		ib.isFree[i] = false
+	}
+}

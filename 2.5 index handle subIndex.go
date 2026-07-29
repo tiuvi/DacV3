@@ -109,11 +109,17 @@ func (sfDacV3 *DacV3) UpdatePageInIndex(idSubIndexCurrent uint8, requiredSpace u
 			return false, 0, 0
 		}
 
+		sfIndexHandle.SetIndexKept(newIdSubIndex)
+
 		return true, idIndex, uint8(newIdSubIndex)
 	})
 }
 
 func (sfDacV3 *DacV3) SwapIndexDirection(sfIndexOld *indexHandle, idSubIndexOld uint8, sfIndexNew *indexHandle, idSubIndexNew uint8, newSize int64) {
+
+	if TestCrashEnergy == CrashNewPageWhileWriteNewIndex {
+		TestCrashEnergy = CrashWriteIndexCorrupt
+	}
 
 	sfIndexOld.mu.Lock()
 	hash := sfIndexOld.GetSubIndexHash(int(idSubIndexOld))
@@ -132,8 +138,13 @@ func (sfDacV3 *DacV3) SwapIndexDirection(sfIndexOld *indexHandle, idSubIndexOld 
 
 	sfIndexNew.mu.Unlock()
 
-	if TestCrashEnergy == CrashDuringIndexSwap {
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashDuringIndexSwap")
+	if TestCrashEnergy == CrashNewPageAfterNewIndexWrite {
+		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashNewPageAfterNewIndexWrite")
+	}
+
+	if TestCrashEnergy == CrashNewPageWhileWriteOldIndex {
+
+		TestCrashEnergy = CrashWriteIndexCorrupt
 	}
 
 	//Esto se puede hacer ya en segundo plano

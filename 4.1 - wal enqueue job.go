@@ -13,15 +13,18 @@ RECUPERACION
 direct no es compatible con Batching
 */
 
-func (sfDacV3 *DacV3) WriteDirect(idDataArena uint32, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteDirect(hash [32]byte, relativeOffset int64,dataLen int64, idDataArena uint32, data []byte, offset int64) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
 	tasks := []jobWriterTask{
 		{
-			offset:      offset,
-			idDataArena: idDataArena,
-			data:        data,
+			offset:         offset,
+			idDataArena:    idDataArena,
+			data:           data,
+			hash:           hash,
+			relativeOffset: relativeOffset,
+			dataLen:        dataLen,
 		},
 	}
 
@@ -60,15 +63,18 @@ RECUPERACION
     -si es negativo se copia los datos del wal a la pagina original
 */
 
-func (sfDacV3 *DacV3) WriteWall(idDataArena uint32, data []byte, offset int64) error {
+func (sfDacV3 *DacV3) WriteWall(hash [32]byte, relativeOffset int64, dataLen int64, idDataArena uint32, data []byte, offset int64) error {
 
 	pool := sfDacV3.dacV3WorkerWriter
 
 	tasks := []jobWriterTask{
 		{
-			offset:      offset,
-			idDataArena: idDataArena,
-			data:        data,
+			offset:         offset,
+			idDataArena:    idDataArena,
+			data:           data,
+			hash:           hash,
+			relativeOffset: relativeOffset,
+			dataLen:        dataLen,
 		},
 	}
 

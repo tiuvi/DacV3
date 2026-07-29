@@ -19,6 +19,10 @@ type jobWriterTask struct {
 
 	dataOffsetStart int64
 	dataOffsetEnd   int64
+
+	hash           [32]byte
+	relativeOffset int64
+	dataLen        int64
 }
 
 type jobWriter struct {
@@ -30,6 +34,9 @@ type jobWriter struct {
 
 	resp chan error
 	task []jobWriterTask
+
+	//Para revertir el wall de paginas
+
 }
 
 type dacV3WorkerWriter struct {
@@ -137,64 +144,158 @@ func (sfDacV3 *DacV3) worker() {
 
 	for j := range pool.jobs {
 
-		j.wg.Add(1)
+		func(j *jobWriter) {
 
-		//Escritura directa sin soporte para batch
-		if j.directIo {
+			j.wg.Add(1)
+			defer j.wg.Done()
 
-			pool.mu.Lock()
+			//Escritura directa sin soporte para batch
+			if j.directIo {
 
-			//Simulacion para que pase por flusher
-			j.bufIdx = pool.chooseBuffer
+				pool.mu.Lock()
 
-			pool.countJobs[pool.chooseBuffer] += 1
+				//Simulacion para que pase por flusher
+				j.bufIdx = pool.chooseBuffer
 
-			select {
+				pool.countJobs[pool.chooseBuffer] += 1
 
-			case pool.flushQueue <- j:
+				select {
 
-			default:
+				case pool.flushQueue <- j:
 
-				pool.countJobs[pool.chooseBuffer] -= 1
+				default:
+
+					pool.countJobs[pool.chooseBuffer] -= 1
+
+					pool.mu.Unlock()
+
+					//j.wg.Done()
+
+					sfDacV3.returnToThePriorityQueue(j)
+
+					return
+				}
 
 				pool.mu.Unlock()
 
-				j.wg.Done()
+				sfDacV3.processWriteUnSafe(j)
 
-				sfDacV3.returnToThePriorityQueue(j)
+				//j.wg.Done()
 
-				continue
+				return
 			}
 
-			pool.mu.Unlock()
+			if j.direct {
 
-			sfDacV3.processWriteUnSafe(j)
+				pool.mu.Lock()
 
-			j.wg.Done()
+				j.bufIdx = pool.chooseBuffer
 
-			continue
-		}
+				var totalIndexLen int64
+				for range j.task {
+					totalIndexLen += int64(BufferAlignSize)
+				}
 
-		if j.direct {
+				if totalIndexLen+pool.indexReserve > pool.walLenIndexBytes {
+
+					pool.mu.Unlock()
+
+					//j.wg.Done()
+
+					sfDacV3.returnToThePriorityQueue(j)
+
+					return
+				}
+
+				pool.countJobs[pool.chooseBuffer] += 1
+
+				if pool.countJobs[pool.chooseBuffer] >= pool.queueSize {
+
+					pool.countJobs[pool.chooseBuffer] -= 1
+
+					pool.mu.Unlock()
+
+					//j.wg.Done()
+
+					sfDacV3.returnToThePriorityQueue(j)
+
+					return
+				}
+
+				// Iteramos usando el índice 'i' para poder modificar el elemento original del slice
+				for i := range j.task {
+
+					// 1. Reservamos espacio para el INDEX de esta tarea individual
+					j.task[i].indexOffsetStart = pool.indexReserve
+					pool.indexReserve += int64(BufferAlignSize)
+					j.task[i].indexOffsetEnd = pool.indexReserve
+
+				}
+
+				select {
+
+				case pool.flushQueue <- j:
+
+				default:
+
+					pool.countJobs[pool.chooseBuffer] -= 1
+
+					pool.indexReserve -= totalIndexLen
+
+					pool.mu.Unlock()
+
+					//j.wg.Done()
+
+					sfDacV3.returnToThePriorityQueue(j)
+
+					return
+				}
+
+				pool.mu.Unlock()
+
+				pool.processWriteBuffer(j)
+
+				//j.wg.Done()
+
+				return
+			}
 
 			pool.mu.Lock()
 
 			j.bufIdx = pool.chooseBuffer
 
+			lenWriteBuffer := int64(len(pool.walBuffersTotal[j.bufIdx]))
+
+			// 1. Calculamos el tamaño TOTAL de los datos de todo el lote
+			var totalDataLen int64
 			var totalIndexLen int64
-			for range j.task {
+			for i := range j.task {
+				totalDataLen += int64(len(j.task[i].data))
 				totalIndexLen += int64(BufferAlignSize)
 			}
 
+			//2 validamos los indices
 			if totalIndexLen+pool.indexReserve > pool.walLenIndexBytes {
 
 				pool.mu.Unlock()
 
-				j.wg.Done()
+				//j.wg.Done()
 
 				sfDacV3.returnToThePriorityQueue(j)
 
-				continue
+				return
+			}
+
+			// 3. Validamos si el lote completo (totalDataLen) cabe en el buffer
+			if totalDataLen+pool.dataReserve > lenWriteBuffer {
+
+				pool.mu.Unlock()
+
+				//j.wg.Done()
+
+				sfDacV3.returnToThePriorityQueue(j)
+
+				return
 			}
 
 			pool.countJobs[pool.chooseBuffer] += 1
@@ -205,11 +306,11 @@ func (sfDacV3 *DacV3) worker() {
 
 				pool.mu.Unlock()
 
-				j.wg.Done()
+				//j.wg.Done()
 
 				sfDacV3.returnToThePriorityQueue(j)
 
-				continue
+				return
 			}
 
 			// Iteramos usando el índice 'i' para poder modificar el elemento original del slice
@@ -220,6 +321,13 @@ func (sfDacV3 *DacV3) worker() {
 				pool.indexReserve += int64(BufferAlignSize)
 				j.task[i].indexOffsetEnd = pool.indexReserve
 
+				// 2. Calculamos el tamaño de la DATA de esta tarea individual
+				lenTaskData := int64(len(j.task[i].data))
+
+				// 3. Reservamos espacio para la DATA de esta tarea individual
+				j.task[i].dataOffsetStart = pool.dataReserve
+				pool.dataReserve += lenTaskData
+				j.task[i].dataOffsetEnd = pool.dataReserve
 			}
 
 			select {
@@ -232,121 +340,27 @@ func (sfDacV3 *DacV3) worker() {
 
 				pool.indexReserve -= totalIndexLen
 
+				pool.dataReserve -= totalDataLen
+
 				pool.mu.Unlock()
 
-				j.wg.Done()
+				//j.wg.Done()
 
 				sfDacV3.returnToThePriorityQueue(j)
 
-				continue
+				return
 			}
 
 			pool.mu.Unlock()
 
 			pool.processWriteBuffer(j)
 
-			j.wg.Done()
+			//j.wg.Done()
 
-			continue
-		}
+		}(j)
 
-		pool.mu.Lock()
-
-		j.bufIdx = pool.chooseBuffer
-
-		lenWriteBuffer := int64(len(pool.walBuffersTotal[j.bufIdx]))
-
-		// 1. Calculamos el tamaño TOTAL de los datos de todo el lote
-		var totalDataLen int64
-		var totalIndexLen int64
-		for i := range j.task {
-			totalDataLen += int64(len(j.task[i].data))
-			totalIndexLen += int64(BufferAlignSize)
-		}
-
-		//2 validamos los indices
-		if totalIndexLen+pool.indexReserve > pool.walLenIndexBytes {
-
-			pool.mu.Unlock()
-
-			j.wg.Done()
-
-			sfDacV3.returnToThePriorityQueue(j)
-
-			continue
-		}
-
-		// 3. Validamos si el lote completo (totalDataLen) cabe en el buffer
-		if totalDataLen+pool.dataReserve > lenWriteBuffer {
-
-			pool.mu.Unlock()
-
-			j.wg.Done()
-
-			sfDacV3.returnToThePriorityQueue(j)
-
-			continue
-		}
-
-		pool.countJobs[pool.chooseBuffer] += 1
-
-		if pool.countJobs[pool.chooseBuffer] >= pool.queueSize {
-
-			pool.countJobs[pool.chooseBuffer] -= 1
-
-			pool.mu.Unlock()
-
-			j.wg.Done()
-
-			sfDacV3.returnToThePriorityQueue(j)
-
-			continue
-		}
-
-		// Iteramos usando el índice 'i' para poder modificar el elemento original del slice
-		for i := range j.task {
-
-			// 1. Reservamos espacio para el INDEX de esta tarea individual
-			j.task[i].indexOffsetStart = pool.indexReserve
-			pool.indexReserve += int64(BufferAlignSize)
-			j.task[i].indexOffsetEnd = pool.indexReserve
-
-			// 2. Calculamos el tamaño de la DATA de esta tarea individual
-			lenTaskData := int64(len(j.task[i].data))
-
-			// 3. Reservamos espacio para la DATA de esta tarea individual
-			j.task[i].dataOffsetStart = pool.dataReserve
-			pool.dataReserve += lenTaskData
-			j.task[i].dataOffsetEnd = pool.dataReserve
-		}
-
-		select {
-
-		case pool.flushQueue <- j:
-
-		default:
-
-			pool.countJobs[pool.chooseBuffer] -= 1
-
-			pool.indexReserve -= totalIndexLen
-
-			pool.dataReserve -= totalDataLen
-
-			pool.mu.Unlock()
-
-			j.wg.Done()
-
-			sfDacV3.returnToThePriorityQueue(j)
-
-			continue
-		}
-
-		pool.mu.Unlock()
-
-		pool.processWriteBuffer(j)
-
-		j.wg.Done()
 	}
+
 }
 
 func (sfDacV3 *DacV3) flusher() {
@@ -392,8 +406,14 @@ func (sfDacV3 *DacV3) flusher() {
 		// 3. DRENAR LA COLA y clasificar
 	LOOP:
 		for len(batch[bufferAEnviarDisco]) < pool.queueSize {
+
 			select {
-			case nextJ := <-pool.flushQueue:
+			case nextJ, ok := <-pool.flushQueue:
+
+				if !ok {
+					println("CERRADO CANAL DE ESCRITURA: flushQueue")
+					break LOOP
+				}
 
 				if nextJ.bufIdx == bufferAEnviarDisco {
 

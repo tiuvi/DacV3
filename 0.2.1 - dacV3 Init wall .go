@@ -1,11 +1,29 @@
 package dacV3
 
 import (
-	"encoding/binary"
+	"bytes"
 	"sort"
 )
 
-func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLenControlBlock, walLenIndexBytes, walLenTotalBytes int64) (walSequence uint64) {
+type WalUpdateEntry struct {
+	Hash           [32]byte // O []byte si prefieres slices dinamicos
+	OffsetRelative int64
+	Offset         int64
+	Data           []byte
+}
+
+type WalCorruptEntry struct {
+	secuence       uint64
+	Hash           [32]byte // O []byte si prefieres slices dinamicos
+	OffsetRelative int64
+	dataLen        int64
+}
+
+func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLenControlBlock, walLenIndexBytes, walLenTotalBytes int64) (pendingUpdates []WalUpdateEntry, pendingCorrupt []WalCorruptEntry, walSequence uint64) {
+
+	pendingUpdates = make([]WalUpdateEntry, 0, int64(sfDacV3.opts.SsdNIopsMili)*numOfBuffersWal)
+
+	pendingCorrupt = make([]WalCorruptEntry, 0, int64(sfDacV3.opts.SsdNIopsMili)*numOfBuffersWal)
 
 	fileSize := sfDacV3.len.Load()
 	if fileSize > 0 {
@@ -32,12 +50,19 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 			buf := allWalData[start:end]
 
 			//Leemos la secuencia del wal
-			seq := binary.LittleEndian.Uint64(buf[0:8])
+			seq := bufWalControl(buf).GetSequence()
+			if seq == 0 {
+				continue
+			}
 
 			infos = append(infos, walBufferInfo{index: i, seq: seq})
 
 			//Copiamos el buffer a su wal correspondiente
 			copy(walsBuffer[i], buf)
+		}
+
+		if len(infos) == 0 {
+			return nil, nil, 1
 		}
 
 		//Ordenamos los wal por secuencia
@@ -49,16 +74,22 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 
 			buf := walsBuffer[info.index]
 
-			if info.seq > 0 || buf[walLenControlBlock] != 0 {
+			if !bufWalControl(buf).IsEmpty() {
 
 				for indexOffset := walLenControlBlock; indexOffset < walLenIndexBytes; indexOffset += int64(BufferAlignSize) {
 
 					indexView := buf[indexOffset : indexOffset+int64(BufferAlignSize)]
 
-					walType, _ := GetTypeIndexWall(indexView)
+					walType := GetTypeIndexWall(indexView)
 
 					//Si el indice es 0 es que aqui no hay datos de indices ya.
 					if walType == 0 {
+						continue
+					}
+
+					err := GetCheckSumIndex(indexView)
+					if err != nil {
+						println("CORRUPCION EN UN INDICE DE WAL, PERDIDA DE DATOS INEVITABLE.")
 						continue
 					}
 
@@ -75,11 +106,18 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 						//Si el checksum falla , borramos los datos en el offset original.
 						if err != nil {
 
-							println("readWalBuffers - GetCheckSum - WallDirectType - El wal tiene datos corruptos")
+							hash := GetHashWallData(indexView)
 
-							clear(dataDirect)
+							offsetRelative := GetRelativeOffsetWall(indexView)
 
-							sfDacV3.WriteAt(dataDirect, offsetStart)
+							dataLen := GetDataLenWall(indexView)
+
+							pendingCorrupt = append(pendingCorrupt, WalCorruptEntry{
+								secuence:       info.seq,
+								Hash:           hash,
+								OffsetRelative: offsetRelative,
+								dataLen:        dataLen,
+							})
 
 							continue
 						}
@@ -97,14 +135,56 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 
 						err := GetCheckSum(indexView, dataWal)
 						if err != nil {
-							println("readWalBuffers - GetCheckSum - WallModifyType - El wal tiene datos corruptos")
+
+							hash := GetHashWallData(indexView)
+
+							offsetRelative := GetRelativeOffsetWall(indexView)
+
+							dataLen := GetDataLenWall(indexView)
+
+							pendingCorrupt = append(pendingCorrupt, WalCorruptEntry{
+								secuence:       info.seq,
+								Hash:           hash,
+								OffsetRelative: offsetRelative,
+								dataLen:        dataLen,
+							})
 							continue
 						}
 
 						//Si los datos son correctos , escribimos los datos directamente sin verificar si ya se escribieron antes
 						offsetStart, _, _ := GetOffsetData(indexView)
 
-						sfDacV3.WriteAt(dataWal, offsetStart)
+						hash := GetHashWallData(indexView)
+
+						//Esta escritura la usa el indexmaster
+						if hash == hashZero {
+
+							//ay que saber donde se escribe, para actualizar el indice tambien
+							sfDacV3.WriteAt(dataWal, offsetStart)
+
+						} else {
+
+							offsetRelative := GetRelativeOffsetWall(indexView)
+
+							dataLen := GetDataLenWall(indexView)
+
+							offsetEnPagina := offsetRelative % int64(len(dataWal))
+
+							newDataWal := bytes.Clone(dataWal[offsetEnPagina : offsetEnPagina+dataLen])
+
+							println("Recuperacion: ", UUIDToString(hash), "offsetRelative: ", offsetRelative, "datos: ", string(newDataWal))
+							//println("total: ", string(dataWal))
+
+							sfDacV3.WriteAt(dataWal, offsetStart)
+
+							pendingUpdates = append(pendingUpdates, WalUpdateEntry{
+								Hash:           hash,
+								OffsetRelative: offsetRelative,
+								Offset:         offsetStart,
+								Data:           newDataWal,
+							})
+
+						}
 
 					}
 				}
@@ -116,10 +196,10 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 		}
 	}
 
-	return walSequence
+	return pendingUpdates, pendingCorrupt, walSequence
 }
 
-func startHandleWallBuffer(sfDacV3 *DacV3) {
+func startHandleWallBuffer(sfDacV3 *DacV3) (pendingUpdates []WalUpdateEntry, pendingCorrupt []WalCorruptEntry) {
 
 	walLenControlBlock := int64(BufferAlignSize)
 
@@ -145,9 +225,11 @@ func startHandleWallBuffer(sfDacV3 *DacV3) {
 		walsBuffer[i] = buf
 	}
 
-	//Añadir aqui lectura de wal
-
-	walSequence := readWalBuffers(sfDacV3, walsBuffer, int64(numOfBuffersWal), walLenControlBlock, walLenIndexBytes, walLenTotalBytes)
+	//Esta parte va ver que moverla al final, seguro que NewWorkerPool pasa estas variables a globales
+	pendingUpdates, pendingCorrupt, walSequence := readWalBuffers(sfDacV3, walsBuffer, int64(numOfBuffersWal), walLenControlBlock, walLenIndexBytes, walLenTotalBytes)
+	if walSequence == 0 {
+		walSequence = 1
+	}
 
 	sfDacV3.NewWorkerPool(sfDacV3.opts.NWorkers,
 		sfDacV3.opts.QueueSize,
@@ -158,5 +240,5 @@ func startHandleWallBuffer(sfDacV3 *DacV3) {
 		walsBuffer)
 
 	//leer wall y repartir datos.
-
+	return pendingUpdates, pendingCorrupt
 }

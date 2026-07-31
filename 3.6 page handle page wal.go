@@ -11,18 +11,24 @@ func (sfDacV3 *DacV3) writePageWalData(sfIndex *indexHandle,
 	absoluteAlignedOffset int64) (err error) {
 
 	if TestCrashEnergy == CrashPageWalWhileWriteData {
-		TestCrashEnergy = CrashWriteUnsafeCorrupt
-		println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteData")
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			TestCrashEnergy = CrashWriteUnsafeCorrupt
+			println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteData")
+		}
 	}
 
 	if TestCrashEnergy == CrashPageWalWhileWriteWalData {
-		TestCrashEnergy = CrashWriteWallCorrupt
-		println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteWalData")
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			TestCrashEnergy = CrashWriteWallCorrupt
+			println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteWalData")
+		}
 	}
 
 	if TestCrashEnergy == CrashPageWalWhileWriteWalIndex {
-		TestCrashEnergy = CrashWriteWallIndexCorrupt
-		println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteWalIndex")
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			TestCrashEnergy = CrashWriteWallIndexCorrupt
+			println("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalWhileWriteWalIndex")
+		}
 	}
 
 	// ESCRITURA WALL (Update/Sobrescritura)
@@ -37,40 +43,60 @@ func (sfDacV3 *DacV3) writePageWalData(sfIndex *indexHandle,
 	}
 
 	if TestCrashEnergy == CrashWriteUnsafeCorrupt {
-		// 1. Esperamos a que el worker haga la escritura a medias y nos avise
-		<-TestCrashEnergiChan
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			// 1. Esperamos a que el worker haga la escritura a medias y nos avise
+			<-TestCrashEnergiChan
 
-		// 2. Explotamos AQUÍ, en el hilo principal.
-		// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWriteUnsafeCorrupt (Controlado)")
+			// 2. Explotamos AQUÍ, en el hilo principal.
+			// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
+			panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWriteUnsafeCorrupt (Controlado)")
+		}
 	}
 
 	if TestCrashEnergy == CrashWriteWallCorrupt || TestCrashEnergy == CrashWriteWallIndexCorrupt {
-		// Explotamos AQUÍ, en el hilo principal.
-		// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWall (Controlado)")
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			// Explotamos AQUÍ, en el hilo principal.
+			// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
+			panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWall (Controlado)")
+		}
 	}
 
 	if TestCrashEnergy == CrashPageWalAfterWrite {
-		// Explotamos AQUÍ, en el hilo principal.
-		// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalAfterWrite (Controlado)")
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			// Explotamos AQUÍ, en el hilo principal.
+			// Como estamos en el hilo principal, el test SÍ podrá atrapar este panic con defer recover()
+			panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashPageWalAfterWrite (Controlado)")
+		}
 	}
 
 	if TestCrashEnergy == CrashPageWalWhileWriteIndex {
-		TestCrashEnergy = CrashWriteIndexCorrupt
+		if TestCrashTarget.Load() == dataEnd || TestCrashTarget.CompareAndSwap(-1, dataEnd) {
+			TestCrashEnergy = CrashWriteIndexCorrupt
+
+			testCrashFuncIndex = func() bool {
+				size := sfIndex.Buf.GetSubIndexSize(int(sfPageHandle.idSubIndex))
+
+				if TestCrashTarget.Load() == size || TestCrashTarget.CompareAndSwap(-1, size) {
+					sfIndex.Buf.unSetSubIndexHash(int(sfPageHandle.idSubIndex))
+					sfIndex.Buf.SetSubIndexSequence(int(sfPageHandle.idSubIndex), 0)
+					sfIndex.Buf.SetSubIndexSize(int(sfPageHandle.idSubIndex), 0)
+					return true
+				}
+				return false
+			}
+		}
 	}
 
 	// 6. Actualizar el filelen si los datos escritos extienden el tamaño
 	if dataEnd > fileLen {
 
 		sfIndex.mu.Lock()
+		sfIndex.Buf.SetSubIndexSize(int(sfPageHandle.idSubIndex), dataEnd)
 
-		sfIndex.SetSubIndexSize(int(sfPageHandle.idSubIndex), dataEnd)
+		sfDacV3.updateIndex(sfIndex.Index, func() {
+			sfIndex.mu.Unlock()
+		})
 
-		sfDacV3.updateIndex(sfIndex.Index)
-
-		sfIndex.mu.Unlock()
 	}
 
 	return

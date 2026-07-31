@@ -1,0 +1,192 @@
+=== RUN   TestAllCrash
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_0
+RECOVERING WAL MODIFY: 19520 64 37076992 4096
+RECOVERING WAL MODIFY: 19840 64 37076992 4096
+RECOVERING WAL MODIFY: 19968 64 37076992 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  0 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 1280 64 26296320 4096
+RECOVERING WAL MODIFY: 1344 64 26296320 4096
+RECOVERING WAL MODIFY: 26432 64 37085184 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 422 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 423 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_10
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  10 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 9216 64 31678464 4096
+RECOVERING WAL MODIFY: 9280 64 31678464 4096
+RECOVERING WAL MODIFY: 9344 64 31678464 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_20
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  20 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 3968 64 26296320 4096
+RECOVERING WAL MODIFY: 4288 64 31674368 4096
+RECOVERING WAL MODIFY: 4480 64 31674368 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_30
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  30 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 4352 64 31674368 4096
+RECOVERING WAL MODIFY: 4480 64 31674368 4096
+RECOVERING WAL MODIFY: 11456 64 31678464 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 181 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 182 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_40
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  40 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 12416 64 31682560 4096
+RECOVERING WAL MODIFY: 18432 64 37076992 4096
+RECOVERING WAL MODIFY: 18560 64 37076992 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 292 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 293 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_50
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  50 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 25728 64 37085184 4096
+RECOVERING WAL MODIFY: 25792 64 37085184 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+        
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_60
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  60 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 6976 64 31674368 4096
+RECOVERING WAL MODIFY: 7104 64 31674368 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+        
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_70
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  70 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 11520 64 31678464 4096
+RECOVERING WAL MODIFY: 18624 64 37076992 4096
+RECOVERING WAL MODIFY: 18752 64 37076992 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 296 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 297 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_80
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  80 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 3008 64 26296320 4096
+RECOVERING WAL MODIFY: 10560 64 31678464 4096
+RECOVERING WAL MODIFY: 10688 64 31678464 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 173 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 174 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_90
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  90 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 11328 64 31678464 4096
+RECOVERING WAL MODIFY: 11456 64 31678464 4096
+RECOVERING WAL MODIFY: 11584 64 31678464 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 374 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 375 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_100
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  100 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 6336 64 31674368 4096
+RECOVERING WAL MODIFY: 6464 64 31674368 4096
+RECOVERING WAL MODIFY: 6592 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 161 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 162 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_110
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  110 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 10688 64 31678464 4096
+RECOVERING WAL MODIFY: 29312 64 37089280 4096
+corruptos:  379 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 10816
+Buffer actual: 
+ Esta es la linea consecutiva numero 470 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 471 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_120
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  120 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 11392 64 31678464 4096
+RECOVERING WAL MODIFY: 11456 64 31678464 4096
+RECOVERING WAL MODIFY: 11520 64 31678464 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 206 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 207 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_130
+RECOVERING WAL MODIFY: 13248 64 31682560 4096
+RECOVERING WAL MODIFY: 14976 64 31682560 4096
+RECOVERING WAL MODIFY: 15040 64 31682560 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  130 CrashLine:  256 Interaccion:  500
+ERROR FATAL - ReadAt:  EOF
+ERROR FATAL - ReadAt:  EOF
+RECOVERING WAL MODIFY: 12416 64 31682560 4096
+corruptos:  432 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 12288
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_140
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  140 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 12352 64 31682560 4096
+RECOVERING WAL MODIFY: 12416 64 31682560 4096
+corruptos:  427 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 12288
+Buffer actual: 
+ Esta es la linea consecutiva numero 303 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 304 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_150
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  150 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 4672 64 31674368 4096
+RECOVERING WAL MODIFY: 12544 64 31682560 4096
+RECOVERING WAL MODIFY: 12672 64 31682560 4096

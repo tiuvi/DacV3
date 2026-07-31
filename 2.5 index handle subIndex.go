@@ -14,6 +14,9 @@ func (sfDacV3 *DacV3) handlePageInIndex(requiredSpace uint32, handle func(sfInde
 
 		select {
 
+		case <-sfDacV3.ctx.Done():
+			return nil, 0, 0, sfDacV3.ctx.Err()
+
 		case idIndex := <-pool:
 
 			if idIndex.AvailableSlots == 0 {
@@ -34,9 +37,16 @@ func (sfDacV3 *DacV3) handlePageInIndex(requiredSpace uint32, handle func(sfInde
 
 				println("slots libres: ", sfDacV3.indexAvailableSlots[size].Load())
 
-				sfDacV3.needIndexChan <- newIndexRequest{
+				select {
+
+				case sfDacV3.needIndexChan <- newIndexRequest{
 					sizePagination: int64(size),
 					isSearch:       false,
+				}:
+				case <-sfDacV3.ctx.Done():
+					return nil, 0, 0, sfDacV3.ctx.Err()
+				default:
+					// Si la cola está llena, ignoramos el aviso para no congelar la escritura
 				}
 
 			}
@@ -74,24 +84,23 @@ func (sfDacV3 *DacV3) handlePageInIndex(requiredSpace uint32, handle func(sfInde
 	return nil, 0, 0, ErrNoSpaceAllocated
 
 }
-
+ 
 func (sfDacV3 *DacV3) CreatePageInIndex(hash [32]byte, requiredSpace uint32) (sfIndexHandle *indexHandle, newIdIndex uint32, newIdSubIndex uint8, err error) {
 
 	return sfDacV3.handlePageInIndex(requiredSpace, func(sfIndexHandle *indexHandle, idIndex uint32) (bool, uint32, uint8) {
 
-		sfIndexHandle.mu.Lock()
-		defer sfIndexHandle.mu.Unlock()
-
-		newIdSubIndex, found := sfIndexHandle.GetFirstEmptyIndex()
+		newIdSubIndex, found := sfIndexHandle.Buf.GetFirstEmptyIndex()
 		if !found {
 			return false, 0, 0
 		}
 
-		sfIndexHandle.SetIndexKept(newIdSubIndex)
+		sfIndexHandle.Buf.SetIndexKept(newIdSubIndex)
 
-		sfIndexHandle.SetSubIndexSequence(newIdSubIndex, 0)
+		sfIndexHandle.Buf.SetSubIndexSequence(newIdSubIndex, 0)
 
-		sfIndexHandle.setSubIndexHash(hash, newIdSubIndex)
+		sfIndexHandle.Buf.SetSubIndexSize(newIdSubIndex , 0)
+		
+		sfIndexHandle.Buf.unSetSubIndexHash(newIdSubIndex)
 
 		return true, idIndex, uint8(newIdSubIndex)
 	})
@@ -104,62 +113,15 @@ func (sfDacV3 *DacV3) UpdatePageInIndex(idSubIndexCurrent uint8, requiredSpace u
 		sfIndexHandle.mu.Lock()
 		defer sfIndexHandle.mu.Unlock()
 
-		newIdSubIndex, found := sfIndexHandle.GetFirstEmptyIndex()
+		newIdSubIndex, found := sfIndexHandle.Buf.GetFirstEmptyIndex()
 		if !found {
 			return false, 0, 0
 		}
 
-		sfIndexHandle.SetIndexKept(newIdSubIndex)
+		sfIndexHandle.Buf.SetIndexKept(newIdSubIndex)
 
 		return true, idIndex, uint8(newIdSubIndex)
 	})
 }
 
-func (sfDacV3 *DacV3) SwapIndexDirection(sfIndexOld *indexHandle, idSubIndexOld uint8, sfIndexNew *indexHandle, idSubIndexNew uint8, newSize int64) {
 
-	if TestCrashEnergy == CrashNewPageWhileWriteNewIndex {
-		TestCrashEnergy = CrashWriteIndexCorrupt
-	}
-
-	sfIndexOld.mu.Lock()
-	hash := sfIndexOld.GetSubIndexHash(int(idSubIndexOld))
-	sequence := sfIndexOld.GetSubIndexSequence(int(idSubIndexOld))
-	sfIndexOld.mu.Unlock()
-
-	sfIndexNew.mu.Lock()
-
-	sfIndexNew.setSubIndexHash(hash, int(idSubIndexNew))
-
-	sfIndexNew.SetSubIndexSequence(int(idSubIndexNew), sequence+1)
-
-	sfIndexNew.SetSubIndexSize(int(idSubIndexNew), newSize)
-
-	sfDacV3.updateIndex(sfIndexNew.Index)
-
-	sfIndexNew.mu.Unlock()
-
-	if TestCrashEnergy == CrashNewPageAfterNewIndexWrite {
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashNewPageAfterNewIndexWrite")
-	}
-
-	if TestCrashEnergy == CrashNewPageWhileWriteOldIndex {
-
-		TestCrashEnergy = CrashWriteIndexCorrupt
-	}
-
-	//Esto se puede hacer ya en segundo plano
-	sfIndexOld.mu.Lock()
-
-	sfIndexOld.unSetSubIndexHash(int(idSubIndexOld))
-
-	sfIndexOld.SetSubIndexSequence(int(idSubIndexOld), 0)
-
-	sfIndexOld.SetSubIndexSize(int(idSubIndexOld), 0)
-
-	sfIndexOld.UnSetIndexKept(int(idSubIndexOld))
-
-	sfDacV3.updateIndex(sfIndexOld.Index)
-
-	sfIndexOld.mu.Unlock()
-
-}

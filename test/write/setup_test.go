@@ -132,10 +132,12 @@ clear && crashType=19 crashTypeLine=10 interaction="1000" dir="/mnt/ramdisk/" go
 
 
 
-clear && crashType=11 crashTypeLine=500 interaction="1000" dir="/mnt/ramdisk/" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+clear && crashType=6 crashTypeLine=500 interaction="1000" dir="/mnt/ramdisk/" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
 
-clear && crashType=12 crashTypeLine=60 interaction="1000" dir="/mnt/ramdisk/" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+clear && go test ./test/write -count=1 -run=^TestAllCrash$ -timeout 2h -v
 
-clear && crashType=12 crashTypeLine=500 interaction="1000" dir="/mnt/ramdisk/" go test ./test/write -run=^TestDacV3_CrashEnergy$ -v
+/media/franky/tiuviweb/go/bin go test ./test/write -run TestAllCrash -timeout 2h -v
+
+
 
 */

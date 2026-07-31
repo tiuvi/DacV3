@@ -6,7 +6,7 @@ func startHandleData(sfDacV3 *DacV3) {
 
 	size := sfDacV3.indexMaster.blockMaxSize.pageSize
 
-	sfDacV3.indexSearchDataPool = newBufferArena(sfDacV3.opts.NBuffersAvailableIndexSearch, size)
+	sfDacV3.indexSearchDataPool = NewGlobalBufferPool(1000 , sfDacV3.opts.NBuffersAvailableIndexSearch, size)
 
 	for _, item := range sfDacV3.opts.SupportedSizes {
 		sfDacV3.dataPools[int(item.Size)] = NewGlobalBufferPool(1000, item.NBuffersAvaibleData, int64(item.Size))

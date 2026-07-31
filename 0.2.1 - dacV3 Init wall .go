@@ -74,6 +74,7 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 
 			buf := walsBuffer[info.index]
 
+			println("secuencia wal", info.seq)
 			if !bufWalControl(buf).IsEmpty() {
 
 				for indexOffset := walLenControlBlock; indexOffset < walLenIndexBytes; indexOffset += int64(BufferAlignSize) {
@@ -90,6 +91,13 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 					err := GetCheckSumIndex(indexView)
 					if err != nil {
 						println("CORRUPCION EN UN INDICE DE WAL, PERDIDA DE DATOS INEVITABLE.")
+						continue
+					}
+
+					
+					seqData := GetSequence(indexView)
+					if info.seq != seqData {
+					
 						continue
 					}
 
@@ -172,8 +180,8 @@ func readWalBuffers(sfDacV3 *DacV3, walsBuffer [][]byte, numOfBuffersWal, walLen
 
 							newDataWal := bytes.Clone(dataWal[offsetEnPagina : offsetEnPagina+dataLen])
 
-							println("Recuperacion: ", UUIDToString(hash), "offsetRelative: ", offsetRelative, "datos: ", string(newDataWal))
-							//println("total: ", string(dataWal))
+							println("readWalBuffers: ", "sec:" , info.seq ,gettLastLine(string(newDataWal)), "offset:", offsetRelative)
+							//println("readWalBuffers datawal: ", gettLastLine(string(dataWal)), "offset:", offsetRelative)
 
 							sfDacV3.WriteAt(dataWal, offsetStart)
 

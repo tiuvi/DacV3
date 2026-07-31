@@ -38,6 +38,9 @@ const (
 
 	field_WalCheckSumInit = 85
 	field_WalCheckSumEnd  = 89
+
+	field_Sequence_Init = 89
+	field_Sequence_End  = 97
 )
 
 type IndexWallType byte
@@ -187,6 +190,16 @@ func GetDataLenWall(index []byte) int64 {
 	return int64(binary.LittleEndian.Uint64(index[field_DataLen_Init:field_DataLen_End]))
 }
 
+// SetSequence escribe el número de secuencia en el índice WAL
+func SetSequence(sequence uint64, index []byte) {
+	binary.LittleEndian.PutUint64(index[field_Sequence_Init:field_Sequence_End], sequence)
+}
+
+// GetSequence lee el número de secuencia almacenado en el índice WAL
+func GetSequence(index []byte) uint64 {
+	return binary.LittleEndian.Uint64(index[field_Sequence_Init:field_Sequence_End])
+}
+
 func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 
 	
@@ -215,6 +228,8 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 			SetRelativeOffsetWall(j.task[i].relativeOffset, indexView)
 
 			SetDataLenWall(j.task[i].dataLen, indexView)
+
+			SetSequence(pool.walSequence , indexView)
 
 			SetCheckSumIndex(indexView)
 		}
@@ -247,8 +262,11 @@ func (pool *dacV3WorkerWriter) processWriteBuffer(j *jobWriter) {
 		SetHashWallData(t.hash, indexView)
 
 		SetRelativeOffsetWall(t.relativeOffset, indexView)
+		
 		SetDataLenWall(t.dataLen, indexView)
 		
+		SetSequence(pool.walSequence , indexView)
+
 		SetCheckSumIndex(indexView)
 
 		// 5. Copiamos los DATOS REALES de la tarea a su zona en el buffer global

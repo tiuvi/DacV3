@@ -24,18 +24,18 @@ func (sfDacV3 *DacV3) CheckIndexPage(sfIndexHandle *indexHandle, sfPageHandle *p
 	println("idIndex: ", sfPageHandle.idIndex)
 	println("idSubIndex: ", sfPageHandle.idSubIndex)
 
-	println("GetSubIndexSize: ", sfIndexHandle.GetSubIndexSize(int(sfPageHandle.idSubIndex)))
-	println("GetSubIndexSequence: ", sfIndexHandle.GetSubIndexSequence(int(sfPageHandle.idSubIndex)))
-	println("IsIndexKept: ", sfIndexHandle.IsIndexKept(int(sfPageHandle.idSubIndex)))
+	println("GetSubIndexSize: ", sfIndexHandle.Buf.GetSubIndexSize(int(sfPageHandle.idSubIndex)))
+	println("GetSubIndexSequence: ", sfIndexHandle.Buf.GetSubIndexSequence(int(sfPageHandle.idSubIndex)))
+	println("IsIndexKept: ", sfIndexHandle.Buf.IsIndexKept(int(sfPageHandle.idSubIndex)))
 
-	hashArray := sfIndexHandle.GetSubIndexHash(int(sfPageHandle.idSubIndex))
+	hashArray := sfIndexHandle.Buf.GetSubIndexHash(int(sfPageHandle.idSubIndex))
 	// 2. Ya le puedes hacer el slice [:] y convertirlo a string
 	println("hash page: ", UUIDToString(hashArray))
 
-	println("index SizePagination: ", sfIndexHandle.GetSizePagination())
-	println("index hash: ", UUIDToString(sfIndexHandle.GetHashSearch()))
-	println("Index checksum ", sfIndexHandle.GetCheckSum())
-	println("Sequence: ", sfIndexHandle.GetSequence())
+	println("index SizePagination: ", sfIndexHandle.Buf.GetSizePagination())
+	println("index hash: ", UUIDToString(sfIndexHandle.Buf.GetHashSearch()))
+	println("Index checksum ", sfIndexHandle.Buf.GetCheckSum())
+	println("Sequence: ", sfIndexHandle.Buf.GetSequence())
 
 	trimmed := bytes.TrimRight(sfPageHandle.Buf.buf, "\x00")
 
@@ -53,13 +53,13 @@ func (sfDacV3 *DacV3) CheckIndexPage(sfIndexHandle *indexHandle, sfPageHandle *p
 		ultimas3Lineas = string(trimmed)
 	}
 
-	println("Buffer: \n", ultimas3Lineas)
+	println("Buffer Actual: \n", ultimas3Lineas)
 
 	//println("buffer completo: \n", string(sfPageHandle.Buf.buf))
 }
 
 
-
+ 
 func (sfDacV3 *DacV3) writePageData(hash [32]byte, sfIndex *indexHandle, sfPageHandle *pageHandle, data []byte, offset int64) error {
 
 	dataLen := int64(len(data))
@@ -75,13 +75,13 @@ func (sfDacV3 *DacV3) writePageData(hash [32]byte, sfIndex *indexHandle, sfPageH
 		println("no configurado")
 	}
 
-	if dataEnd > int64(sfIndex.GetSizePagination()) {
+	if dataEnd > int64(sfIndex.Buf.GetSizePagination()) {
 
 		return sfDacV3.writePageDataSwapIndex(sfIndex, sfPageHandle, hash, data,dataLen, offset)
 	}
 
 	// Obtenemos el tamaño actual del archivo (filelen) de este subíndice
-	fileLen := sfIndex.GetSubIndexSize(int(sfPageHandle.idSubIndex))
+	fileLen := sfIndex.Buf.GetSubIndexSize(int(sfPageHandle.idSubIndex))
 
 	// Calculamos el offset absoluto donde comienzan los datos de esta página en disco
 	pageStartOffset := sfDacV3.getOffsetPageStart(sfIndex.Index, sfPageHandle.Page)
@@ -121,6 +121,9 @@ func (sfDacV3 *DacV3) writePageData(hash [32]byte, sfIndex *indexHandle, sfPageH
 
 		return sfDacV3.writePageDirectData(sfIndex, dataEnd, fileLen, sfPageHandle, hash, offset, dataLen, alignedDataView, absoluteAlignedOffset)
 	}
+
+	//println("writePageData", gettLastLine(string(data)) , " offset: ", offset)
+	//println("writePageData", gettLastLine(string(alignedDataView)) , " offset: ", offset)
 
 	return sfDacV3.writePageWalData(sfIndex, dataEnd, fileLen, sfPageHandle, hash, offset, dataLen, alignedDataView, absoluteAlignedOffset)
 

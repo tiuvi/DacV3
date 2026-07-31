@@ -1,0 +1,582 @@
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_0
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  0 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 31168 64 37089280 4096
+RECOVERING WAL MODIFY: 31488 64 37089280 4096
+RECOVERING WAL MODIFY: 31808 64 37089280 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 496 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 497 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_10
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  10 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 5184 64 31674368 4096
+RECOVERING WAL MODIFY: 5312 64 31674368 4096
+RECOVERING WAL MODIFY: 5440 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 90 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 91 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_20
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  20 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 14528 64 31682560 4096
+RECOVERING WAL MODIFY: 14592 64 31682560 4096
+RECOVERING WAL MODIFY: 14656 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 234 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 235 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_30
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  30 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 22720 64 37081088 4096
+RECOVERING WAL MODIFY: 22848 64 37081088 4096
+RECOVERING WAL MODIFY: 22976 64 37081088 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 363 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 364 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_40
+RECOVERING WAL MODIFY: 25600 64 37085184 4096
+RECOVERING WAL MODIFY: 25664 64 37085184 4096
+RECOVERING WAL MODIFY: 25728 64 37085184 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  40 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 3904 64 26296320 4096
+RECOVERING WAL MODIFY: 3968 64 26296320 4096
+RECOVERING WAL MODIFY: 4032 64 26296320 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_50
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  50 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 5568 64 31674368 4096
+RECOVERING WAL MODIFY: 5696 64 31674368 4096
+RECOVERING WAL MODIFY: 5824 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 95 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 96 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_60
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  60 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 14976 64 31682560 4096
+RECOVERING WAL MODIFY: 15104 64 31682560 4096
+RECOVERING WAL MODIFY: 15232 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 242 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 243 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_70
+RECOVERING WAL MODIFY: 17600 64 37076992 4096
+RECOVERING WAL MODIFY: 17664 64 37076992 4096
+RECOVERING WAL MODIFY: 17728 64 37076992 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  70 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16320 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 254 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 255 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_80
+RECOVERING WAL MODIFY: 1664 64 26296320 4096
+RECOVERING WAL MODIFY: 1728 64 26296320 4096
+RECOVERING WAL MODIFY: 1792 64 26296320 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  80 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 20416 64 37076992 4096
+RECOVERING WAL MODIFY: 20544 64 37081088 4096
+RECOVERING WAL MODIFY: 20672 64 37081088 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 328 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 329 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_90
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  90 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 7296 64 31674368 4096
+RECOVERING WAL MODIFY: 7424 64 31674368 4096
+RECOVERING WAL MODIFY: 7552 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 121 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 122 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_100
+RECOVERING WAL MODIFY: 9920 64 31678464 4096
+RECOVERING WAL MODIFY: 9984 64 31678464 4096
+RECOVERING WAL MODIFY: 10048 64 31678464 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  100 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 29824 64 37089280 4096
+RECOVERING WAL MODIFY: 29952 64 37089280 4096
+RECOVERING WAL MODIFY: 30080 64 37089280 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 475 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 476 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_110
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  110 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 14720 64 31682560 4096
+RECOVERING WAL MODIFY: 14784 64 31682560 4096
+RECOVERING WAL MODIFY: 14848 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 238 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 239 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_120
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  120 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16256 64 31682560 4096
+RECOVERING WAL MODIFY: 16320 64 31682560 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+        
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_130
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  130 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 20160 64 37076992 4096
+RECOVERING WAL MODIFY: 20288 64 37076992 4096
+RECOVERING WAL MODIFY: 20352 64 37076992 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 325 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 326 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_140
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  140 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 4288 64 31674368 4096
+RECOVERING WAL MODIFY: 4352 64 31674368 4096
+RECOVERING WAL MODIFY: 4416 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 75 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 76 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_150
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  150 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 25088 64 37085184 4096
+RECOVERING WAL MODIFY: 25216 64 37085184 4096
+RECOVERING WAL MODIFY: 25344 64 37085184 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 401 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 402 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_160
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  160 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 9856 64 31678464 4096
+RECOVERING WAL MODIFY: 10688 64 31678464 4096
+corruptos:  355 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 10176
+Buffer actual: 
+ Esta es la linea consecutiva numero 174 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 175 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_170
+RECOVERING WAL MODIFY: 13376 64 31682560 4096
+RECOVERING WAL MODIFY: 13440 64 31682560 4096
+RECOVERING WAL MODIFY: 13504 64 31682560 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  170 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16256 64 37072896 4096
+RECOVERING WAL MODIFY: 16256 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_180
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  180 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16256 64 31682560 4096
+RECOVERING WAL MODIFY: 16320 64 31682560 4096
+corruptos:  559 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 16384
+Buffer actual: 
+ Esta es la linea consecutiva numero 261 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 262 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_190
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  190 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16256 64 31682560 4096
+RECOVERING WAL MODIFY: 16320 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 254 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 255 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_200
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  200 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 21696 64 37081088 4096
+RECOVERING WAL MODIFY: 21824 64 37081088 4096
+RECOVERING WAL MODIFY: 21952 64 37081088 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 347 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 348 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_210
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  210 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 5568 64 31674368 4096
+RECOVERING WAL MODIFY: 5632 64 31674368 4096
+RECOVERING WAL MODIFY: 5696 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 93 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 94 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_220
+RECOVERING WAL MODIFY: 8064 64 31674368 4096
+RECOVERING WAL MODIFY: 8128 64 31674368 4096
+corruptos:  296 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 8192
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  220 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 26944 64 37085184 4096
+RECOVERING WAL MODIFY: 27008 64 37085184 4096
+RECOVERING WAL MODIFY: 27072 64 37085184 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 428 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 429 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_230
+RECOVERING WAL MODIFY: 30016 64 37089280 4096
+RECOVERING WAL MODIFY: 30144 64 37089280 4096
+RECOVERING WAL MODIFY: 30272 64 37089280 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  230 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 13440 64 31682560 4096
+RECOVERING WAL MODIFY: 13568 64 31682560 4096
+RECOVERING WAL MODIFY: 13696 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 218 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 219 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_240
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  240 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 16064 64 37072896 4096
+RECOVERING WAL MODIFY: 16192 64 37072896 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_250
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  250 CrashLine:  256 Interaccion:  500
+RECOVERING WAL MODIFY: 17472 64 37076992 4096
+RECOVERING WAL MODIFY: 17536 64 37076992 4096
+RECOVERING WAL MODIFY: 17600 64 37076992 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 280 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 281 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 254 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_270
+RECOVERING WAL MODIFY: 3648 64 26296320 4096
+RECOVERING WAL MODIFY: 3712 64 26296320 4096
+RECOVERING WAL MODIFY: 3776 64 26296320 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_290
+RECOVERING WAL MODIFY: 1408 64 26296320 4096
+RECOVERING WAL MODIFY: 1472 64 26296320 4096
+RECOVERING WAL MODIFY: 1536 64 26296320 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+RECOVERING WAL MODIFY: 14080 64 31682560 4096
+RECOVERING WAL MODIFY: 14208 64 31682560 4096
+RECOVERING WAL MODIFY: 14336 64 31682560 4096
+    pageBreakLight_test.go:169: ===== Recuperadas todas las líneas excepto la última =====
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_300
+RECOVERING WAL MODIFY: 3072 64 26296320 4096
+RECOVERING WAL MODIFY: 7744 64 31674368 4096
+RECOVERING WAL MODIFY: 7872 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_310
+RECOVERING WAL MODIFY: 10560 64 31678464 4096
+RECOVERING WAL MODIFY: 10624 64 31678464 4096
+ERROR FATAL - ReadAt:  EOF
+ERROR FATAL - ReadAt:  EOF
+    pageBreakLight_test.go:108: 
+        🚨 CORRUPCIÓN PREVIA AL CRASH en la línea 0
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_320
+RECOVERING WAL MODIFY: 2304 64 26296320 4096
+RECOVERING WAL MODIFY: 2432 64 26296320 4096
+corruptos:  96 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 1984
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_330
+RECOVERING WAL MODIFY: 6784 64 31674368 4096
+RECOVERING WAL MODIFY: 6848 64 31674368 4096
+RECOVERING WAL MODIFY: 6912 64 31674368 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+RECOVERING WAL MODIFY: 3712 64 26296320 4096
+RECOVERING WAL MODIFY: 3840 64 26296320 4096
+RECOVERING WAL MODIFY: 10176 64 31678464 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_340
+RECOVERING WAL MODIFY: 4800 64 31674368 4096
+RECOVERING WAL MODIFY: 4864 64 31674368 4096
+RECOVERING WAL MODIFY: 5056 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 80 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 81 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_350
+RECOVERING WAL MODIFY: 1472 64 26296320 4096
+RECOVERING WAL MODIFY: 8640 64 31678464 4096
+RECOVERING WAL MODIFY: 8704 64 31678464 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+RECOVERING WAL MODIFY: 13952 64 31682560 4096
+RECOVERING WAL MODIFY: 14016 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 223 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 224 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_360
+RECOVERING WAL MODIFY: 10432 64 31678464 4096
+RECOVERING WAL MODIFY: 15232 64 31682560 4096
+RECOVERING WAL MODIFY: 15296 64 31682560 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_370
+RECOVERING WAL MODIFY: 13184 64 31682560 4096
+RECOVERING WAL MODIFY: 13248 64 31682560 4096
+RECOVERING WAL MODIFY: 13376 64 31682560 4096
+ERROR FATAL - ReadAt:  EOF
+    pageBreakLight_test.go:108: 
+        🚨 CORRUPCIÓN PREVIA AL CRASH en la línea 0
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_380
+RECOVERING WAL MODIFY: 5440 64 31674368 4096
+RECOVERING WAL MODIFY: 5568 64 31674368 4096
+RECOVERING WAL MODIFY: 31936 64 37089280 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_390
+RECOVERING WAL MODIFY: 2432 64 26296320 4096
+RECOVERING WAL MODIFY: 2560 64 26296320 4096
+RECOVERING WAL MODIFY: 2688 64 26296320 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 44 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 45 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 498 
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_400
+ERROR FATAL - ReadAt:  EOF
+RECOVERING WAL MODIFY: 16064 64 37072896 4096
+RECOVERING WAL MODIFY: 16192 64 37072896 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:140: 🚨 Fallo crítico: La base de datos no pudo leer la página tras el reinicio: no se pudo asignar espacio tras agotar todos los intentos y tamaños
+    pageBreakLight_test.go:134: 
+        
+--
+    pageBreakLight_test.go:66: Info:  2 CrashNewPageAfterWrite AddCrash:  0 CrashLine:  64 Interaccion:  500
+ESCRITURA EN CANCELACION WriteUnSafeAsync
+RECOVERING WAL MODIFY: 4608 64 31674368 4096
+RECOVERING WAL MODIFY: 4800 64 31674368 4096
+RECOVERING WAL MODIFY: 4928 64 31674368 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 116 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 117 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageAfterWrite_2_Line_10
+RECOVERING WAL MODIFY: 7616 64 31674368 4096
+RECOVERING WAL MODIFY: 7680 64 31674368 4096
+RECOVERING WAL MODIFY: 7744 64 31674368 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  2 CrashNewPageAfterWrite AddCrash:  10 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 832 64 26296320 4096
+RECOVERING WAL MODIFY: 16512 64 37076992 4096
+RECOVERING WAL MODIFY: 16640 64 37076992 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 266 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 267 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+=== RUN   TestAllCrash/__CrashNewPageAfterWrite_2_Line_20
+    pageBreakLight_test.go:66: Info:  2 CrashNewPageAfterWrite AddCrash:  20 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 1024 64 26296320 4096
+RECOVERING WAL MODIFY: 1088 64 26296320 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 17 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 18 
+ ,  corte60 corte60 cort
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageAfterWrite_2_Line_30
+RECOVERING WAL MODIFY: 25664 64 37085184 4096
+RECOVERING WAL MODIFY: 25728 64 37085184 4096
+RECOVERING WAL MODIFY: 25792 64 37085184 4096
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+ERROR: startRecoveryWallData -  page not found
+    pageBreakLight_test.go:66: Info:  2 CrashNewPageAfterWrite AddCrash:  30 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 10880 64 31678464 4096
+RECOVERING WAL MODIFY: 31808 64 37089280 4096
+corruptos:  34 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 0
+Buffer actual: 
+ Esta es la linea consecutiva numero 496 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 497 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+--
+        
+=== RUN   TestAllCrash/__CrashNewPageAfterWrite_2_Line_40
+RECOVERING WAL MODIFY: 1344 64 26296320 4096
+RECOVERING WAL MODIFY: 1472 64 26296320 4096
+    pageBreakLight_test.go:108: 
+        🚨 CORRUPCIÓN PREVIA AL CRASH en la línea 0
+=== RUN   TestAllCrash/__CrashNewPageAfterWrite_2_Line_50
+    pageBreakLight_test.go:66: Info:  2 CrashNewPageAfterWrite AddCrash:  50 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 704 64 26296320 4096
+RECOVERING WAL MODIFY: 832 64 26296320 4096
+RECOVERING WAL MODIFY: 2048 64 26296320 4096

@@ -102,14 +102,22 @@ var errServerNotSizeAvaible = errors.New("server not size avaible")
 var errFileSizeLimitExceeded = errors.New("the file exceeds the server size limit, per file")
 
 func (sf *DacV3) newIndexsManagerWorker() {
-	// Recibimos la estructura enviada por el canal
-	for req := range sf.needIndexChan {
 
-		// Usamos los campos de la estructura recibida
-		sf.newIndexs(1, req.sizePagination, req.isSearch)
+	defer sf.wg.Done() // 👈 2. Le avisamos al WaitGroup cuando la goroutine MUERA
 
+	for {
+		select {
+		case <-sf.ctx.Done():
+			// Al cancelar el contexto, sale de la función y ejecuta defer sf.wg.Done()
+			return
+
+		case req, ok := <-sf.needIndexChan:
+			if !ok {
+				return
+			}
+			sf.newIndexs(1, req.sizePagination, req.isSearch)
+		}
 	}
-
 }
 
 func (sfDacV3 *DacV3) needIndexs(sizePagination int64, isSearch bool) (needed int) {
@@ -324,9 +332,15 @@ func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 			idIndex = newIndexSearch(sfDacV3, fisrtOffsetIndex, uint32(sizePagination))
 
 			pool := sfDacV3.indexSearchPool
-			pool <- IndexPoolItem{
+			select {
+			case pool <- IndexPoolItem{
 				IDIndex:        idIndex,
 				AvailableSlots: MaxSubIndexPerIndex,
+			}:
+				
+			case <-sfDacV3.ctx.Done():
+				// La base de datos o el test se cerraron. Abortamos para no congelar el proceso.
+				return sfDacV3.ctx.Err() // (O return nil si tu función no devuelve error)
 			}
 
 			sfDacV3.indexAvailableSlotsSearch.Add(MaxSubIndexPerIndex)
@@ -337,9 +351,16 @@ func (sfDacV3 *DacV3) newIndexs(nIndex int64, sizePagination int64, isSearch boo
 
 			pool := sfDacV3.indexPools[uint32(sizePagination)]
 
-			pool <- IndexPoolItem{
+			select {
+			case pool <- IndexPoolItem{
 				IDIndex:        idIndex,
 				AvailableSlots: MaxSubIndexPerIndex,
+			}:
+				// Insertado correctamente en el pool
+
+			case <-sfDacV3.ctx.Done():
+				// La base de datos o el test se cerraron. Abortamos para no congelar el proceso.
+				return sfDacV3.ctx.Err() // (O return nil si tu función no devuelve error)
 			}
 
 			sfDacV3.indexAvailableSlots[uint32(sizePagination)].Add(MaxSubIndexPerIndex)

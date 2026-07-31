@@ -104,7 +104,7 @@ type SubIndex struct {
 }
 
 // Funciones para manipular los indices y los subindices
-type indexBuffer []byte
+type indexBuffer GlobalBuffer
 
 // Funiones para manipular las metricas de los indices
 type indexBufferMetric []byte

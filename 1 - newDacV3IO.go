@@ -2,37 +2,27 @@ package dacV3
 
 import (
 	"errors"
-	"log"
-	"time"
 )
 
 /*
 -Esta funcion escribe los datos directos en el origen sin validacion de ningun tipo.
 -
 */
-func (sfDacV3 *DacV3) WriteIndex(data []byte, offset int64) {
+func (sfDacV3 *DacV3) WriteIndex(data *indexBuffer, offset int64, onCopy func()) { 
 
-	job := &jobWriterTask{
-		offset:            offset,
-		notDelIdDataArena: true,
-		data:              data,
+	id, buf := sfDacV3.indexBuffer.New()
+
+	data.mu.Lock()
+	copy(buf.buf, data.buf)
+	data.mu.Unlock()
+	
+	if onCopy != nil {
+		onCopy()
 	}
 
-	maxRetries := 10
-	var err error
-	for i := 0; i < maxRetries; i++ {
+	sfDacV3.WriteAt(buf.buf, offset)
 
-		err = sfDacV3.WriteUnSafeSync(job)
-		if err == nil {
-			break
-		}
-
-		time.Sleep(1 * time.Millisecond)
-	}
-
-	if err != nil {
-		log.Fatal("ERROR WriteIndex", err.Error())
-	}
+	sfDacV3.indexBuffer.Free(id)
 
 	return
 }
@@ -57,8 +47,8 @@ var errArenaNotFound = errors.New("tamaño de arena no encontrado")
 // WritePageDirect escribe datos de forma directa utilizando los buffers de la arena.
 // onCopy (opcional) se invoca tan pronto como la copia en memoria finaliza,
 // permitiendo al invocador liberar mutexes u otros bloqueos antes del I/O.
-func (sfDacV3 *DacV3) WritePageDirect(hash [32]byte, relativeOffset int64,dataLen int64, data []byte, offset int64, onCopy func()) error {
-
+func (sfDacV3 *DacV3) WritePageDirect(hash [32]byte, relativeOffset int64, dataLen int64, data []byte, offset int64, onCopy func()) error {
+ 
 	arena, found := sfDacV3.writeDataPools[len(data)]
 	if !found {
 		// Importante: liberar el bloqueo superior incluso en caso de error temprano
@@ -82,7 +72,7 @@ func (sfDacV3 *DacV3) WritePageDirect(hash [32]byte, relativeOffset int64,dataLe
 	}
 
 	// 4. Procedemos con la escritura directa a disco (potencial bloqueo por I/O)
-	return sfDacV3.WriteDirect(hash, relativeOffset,dataLen, id, buffer, offset)
+	return sfDacV3.WriteDirect(hash, relativeOffset, dataLen, id, buffer, offset)
 }
 
 func (sfDacV3 *DacV3) WritePageWall(hash [32]byte, relativeOffset int64, dataLen int64, data []byte, offset int64, onCopy func()) error {
@@ -106,6 +96,8 @@ func (sfDacV3 *DacV3) WritePageWall(hash [32]byte, relativeOffset int64, dataLen
 	if onCopy != nil {
 		onCopy()
 	}
+
+	//println("WritePageWall: " ,gettLastLine(string(buffer)) , " offset: ",relativeOffset)
 
 	// 4. Escribimos al disco/WAL (Lento - I/O Blocking)
 	// Aquí ya no retenemos los locks de la capa superior.

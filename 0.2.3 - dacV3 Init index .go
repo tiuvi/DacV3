@@ -97,28 +97,33 @@ func processLoadedIndex(sfDacV3 *DacV3, idIndex uint32, sizePagination uint32, h
 			IDIndex:        idIndex,
 			AvailableSlots: uint8(slotsFree),
 		}:
-		default:
+		case <-sfDacV3.ctx.Done():
+			return
 		}
 
 	} else {
 
 		sfDacV3.indexAvailableSlots[sizePagination].Add(slotsFree)
 
-		// Hay que llenar indexPools con los indices libres
 		if pool, ok := sfDacV3.indexPools[sizePagination]; ok {
 			select {
 			case pool <- IndexPoolItem{
 				IDIndex:        idIndex,
 				AvailableSlots: uint8(slotsFree),
 			}:
-			default:
+				// Insertado con éxito en el pool
+
+			case <-sfDacV3.ctx.Done():
+				// La base de datos o el test se cerraron.
+				// Abortamos la espera para no congelar el proceso.
+				return
 			}
 		}
+
 	}
 }
 
 func startHandleIndex(sfDacV3 *DacV3) {
-
 
 	//Inicio donde se guardan los indices
 	sfDacV3.indexLocation = NewPoolArray[Index](1000)
@@ -131,7 +136,7 @@ func startHandleIndex(sfDacV3 *DacV3) {
 	sfDacV3.indexAvailableSlotsSearch = new(atomic.Int64)
 
 	//Incicio de los buffers para los indices
-	sfDacV3.indexBuffer = newBufferArena(sfDacV3.opts.NBuffersAvailableIndex, BufferAlignSize)
+	sfDacV3.indexBuffer = NewGlobalBufferPool(1000, sfDacV3.opts.NBuffersAvailableIndex, BufferAlignSize)
 
 	sfDacV3.indexPools = make(map[uint32]chan IndexPoolItem)
 

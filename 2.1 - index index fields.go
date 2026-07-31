@@ -4,79 +4,107 @@ import (
 	"encoding/binary"
 	"hash/crc32"
 )
+ 
+func (globBuf *indexBuffer) calCheckSum() uint32 {
 
-func (b indexBuffer) CalCheckSum() uint32 {
 	// Se calcula el checksum desde el final del checksum hasta el límite de la página
-	return crc32.Checksum(b[field_IndexCheckSumEnd:BufferAlignSize], castagnoliTable)
+	return crc32.Checksum(globBuf.buf[field_IndexCheckSumEnd:BufferAlignSize], castagnoliTable)
+}
+
+func (globBuf *indexBuffer) CalCheckSum() uint32 {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+	return globBuf.calCheckSum()
 }
 
 // SetCheckSum calcula el checksum de data y lo escribe en la sección de checksum de index
-func (b indexBuffer) SetCheckSum() {
-	checksum := b.CalCheckSum()
+func (globBuf *indexBuffer) SetCheckSum() {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
+
+	checksum := globBuf.calCheckSum()
 
 	// Guardamos el checksum en el espacio [0:4] definido por las constantes
-	binary.LittleEndian.PutUint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd], checksum)
+	binary.LittleEndian.PutUint32(globBuf.buf[field_IndexCheckSumInit:field_IndexCheckSumEnd], checksum)
 }
 
 // GetCheckSum lee el checksum guardado en index
-func (b indexBuffer) GetCheckSum() uint32 {
+func (globBuf *indexBuffer) GetCheckSum() uint32 {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
 	// Leer el checksum guardado en el espacio [0:4]
-	return binary.LittleEndian.Uint32(b[field_IndexCheckSumInit:field_IndexCheckSumEnd])
+	return binary.LittleEndian.Uint32(globBuf.buf[field_IndexCheckSumInit:field_IndexCheckSumEnd])
 }
 
 // SetSequence asigna la secuencia (8 bytes) en la posición correspondiente
-func (b indexBuffer) SetSequence(seq int64) {
-	binary.LittleEndian.PutUint64(b[field_IndexSequenceInit:field_IndexSequenceEnd], uint64(seq))
+func (globBuf *indexBuffer) SetSequence(seq int64) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
+	binary.LittleEndian.PutUint64(globBuf.buf[field_IndexSequenceInit:field_IndexSequenceEnd], uint64(seq))
 }
 
-func (b indexBuffer) GetSequence() int64 {
-	return BytesToInt64(b[field_IndexSequenceInit:field_IndexSequenceEnd])
+func (globBuf *indexBuffer) GetSequence() int64 {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+	return BytesToInt64(globBuf.buf[field_IndexSequenceInit:field_IndexSequenceEnd])
 }
 
 // SetSizePagination define el tamaño de la página en múltiplos de 4 (escribe 4 bytes)
-func (b indexBuffer) SetSizePagination(size uint32) {
-	binary.LittleEndian.PutUint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd], size)
+func (globBuf *indexBuffer) SetSizePagination(size uint32) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
+	binary.LittleEndian.PutUint32(globBuf.buf[field_IndexSizePaginationInit:field_IndexSizePaginationEnd], size)
 }
 
 // GetSizePagination obtiene el tamaño de la página (lee 4 bytes)
-func (b indexBuffer) GetSizePagination() uint32 {
-	return binary.LittleEndian.Uint32(b[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
+func (globBuf *indexBuffer) GetSizePagination() uint32 {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+	return binary.LittleEndian.Uint32(globBuf.buf[field_IndexSizePaginationInit:field_IndexSizePaginationEnd])
 }
 
-func (b indexBuffer) SetIndexKept(id int) {
+func (globBuf *indexBuffer) SetIndexKept(id int) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+	blockSubIndexActive := globBuf.buf[field_IndexKeptInit:field_IndexKeptEnd]
 	blockSubIndexActive[id] = 1
 }
 
-func (b indexBuffer) UnSetIndexKept(id int) {
+func (globBuf *indexBuffer) UnSetIndexKept(id int) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+	blockSubIndexActive := globBuf.buf[field_IndexKeptInit:field_IndexKeptEnd]
 	blockSubIndexActive[id] = 0
 }
- 
-func (b indexBuffer) IsIndexKept(id int) bool {
+
+func (globBuf *indexBuffer) IsIndexKept(id int) bool {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
 
 	if id >= MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 		return false
 	}
 
-	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+	blockSubIndexActive := globBuf.buf[field_IndexKeptInit:field_IndexKeptEnd]
 	return blockSubIndexActive[id] == 1
 }
 
-func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
+func (globBuf *indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
 
-	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+	blockSubIndexActive := globBuf.buf[field_IndexKeptInit:field_IndexKeptEnd]
 
 	// Recorremos los índices desde 0 hasta el límite MaxSubIndexPerIndex
 	for id := 0; id <= MaxSubIndexPerIndex; id++ {
@@ -95,9 +123,11 @@ func (b indexBuffer) GetFirstEmptyIndex() (id int, found bool) {
 	// Si no hay ningún espacio vacío, devolvemos -1 y false
 	return -1, false
 }
-func (b indexBuffer) CountEmptyIndex() int {
-	
-	blockSubIndexActive := b[field_IndexKeptInit:field_IndexKeptEnd]
+func (globBuf *indexBuffer) CountEmptyIndex() int {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+
+	blockSubIndexActive := globBuf.buf[field_IndexKeptInit:field_IndexKeptEnd]
 	count := 0
 
 	// Recorremos los índices desde 0 hasta el límite MaxSubIndexPerIndex
@@ -117,32 +147,38 @@ func (b indexBuffer) CountEmptyIndex() int {
 	return count
 }
 
-func (b indexBuffer) GetHashSearch() [32]byte {
+func (globBuf *indexBuffer) GetHashSearch() [32]byte {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
 
-	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
+	bufferActive := globBuf.buf[field_HashSearchInit:field_HashSearchEnd]
 
 	return [32]byte(bufferActive)
 }
 
-func (b indexBuffer) SetHashSearch() [32]byte {
+func (globBuf *indexBuffer) SetHashSearch() [32]byte {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	hash := NewUUIDBytes()
 
-	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
+	bufferActive := globBuf.buf[field_HashSearchInit:field_HashSearchEnd]
 
 	copy(bufferActive, hash[:])
 
 	return hash
 }
 
-func (b indexBuffer) UnSetHashSearch() {
+func (globBuf *indexBuffer) UnSetHashSearch() {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
-	bufferActive := b[field_HashSearchInit:field_HashSearchEnd]
+	bufferActive := globBuf.buf[field_HashSearchInit:field_HashSearchEnd]
 	clear(bufferActive)
 	return
 }
 
 // GetMetadata devuelve todos los campos directamente usando tus funciones Get existentes
-func (b indexBuffer) GetMetadata() (checkSum uint32, sizePagination uint32, sequence int64, hash [32]byte) {
-	return b.GetCheckSum(), b.GetSizePagination(), b.GetSequence(), b.GetHashSearch()
+func (globBuf *indexBuffer) GetMetadata() (checkSum uint32, sizePagination uint32, sequence int64, hash [32]byte) {
+	return globBuf.GetCheckSum(), globBuf.GetSizePagination(), globBuf.GetSequence(), globBuf.GetHashSearch()
 }

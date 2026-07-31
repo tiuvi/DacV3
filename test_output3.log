@@ -1,0 +1,104 @@
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_10
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  10 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 1856 64 26296320 4096
+RECOVERING WAL MODIFY: 7552 64 31674368 4096
+RECOVERING WAL MODIFY: 28800 64 37089280 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 453 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 454 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cort
+Buffer fullContentTotal: 
+ Esta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 64 
+ ,  corte60 corte60 cort
+    pageBreakLight_test.go:190: 
+        🚨 CORRUPCIÓN DETECTADA TRAS RECUPERACIÓN 🚨
+        El archivo físico se corrompió con el corte de energía.
+        Tamaño Esperado: 4096 bytes | Tamaño Leído: 29120 bytes
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_20
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  20 CrashLine:  64 Interaccion:  500
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_30
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  30 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 832 64 26296320 4096
+RECOVERING WAL MODIFY: 960 64 26296320 4096
+RECOVERING WAL MODIFY: 3008 64 26296320 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 102 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 103 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cort
+Buffer fullContentTotal: 
+ Esta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 64 
+ ,  corte60 corte60 cort
+    pageBreakLight_test.go:190: 
+        🚨 CORRUPCIÓN DETECTADA TRAS RECUPERACIÓN 🚨
+        El archivo físico se corrompió con el corte de energía.
+        Tamaño Esperado: 4096 bytes | Tamaño Leído: 6656 bytes
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_40
+RECOVERING WAL MODIFY: 4736 64 31674368 4096
+--
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_50
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  50 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 5952 64 31674368 4096
+RECOVERING WAL MODIFY: 22592 64 37081088 4096
+RECOVERING WAL MODIFY: 22656 64 37081088 4096
+Buffer actual: 
+ Esta es la linea consecutiva numero 356 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 357 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cort
+Buffer fullContentTotal: 
+ Esta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 64 
+ ,  corte60 corte60 cort
+    pageBreakLight_test.go:190: 
+        🚨 CORRUPCIÓN DETECTADA TRAS RECUPERACIÓN 🚨
+        El archivo físico se corrompió con el corte de energía.
+        Tamaño Esperado: 4096 bytes | Tamaño Leído: 22912 bytes
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_60
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  60 CrashLine:  64 Interaccion:  500
+RECOVERING WAL MODIFY: 5056 64 31674368 4096
+RECOVERING WAL MODIFY: 14144 64 31682560 4096
+corruptos:  1053 5c8b146d4ace08092e513ed3b935a247f0458f033132ea19f7ff292af561b797 31616
+Buffer actual: 
+ Esta es la linea consecutiva numero 498 
+ ,  corte60 corte60 corEsta es la linea consecutiva numero 499 
+ ,  corte60 corte60 cor
+Buffer fullContent: 
+ Esta es la linea consecutiva numero 62 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cort
+Buffer fullContentTotal: 
+ Esta es la linea consecutiva numero 63 
+ ,  corte60 corte60 cortEsta es la linea consecutiva numero 64 
+ ,  corte60 corte60 cort
+    pageBreakLight_test.go:190: 
+        🚨 CORRUPCIÓN DETECTADA TRAS RECUPERACIÓN 🚨
+        El archivo físico se corrompió con el corte de energía.
+        Tamaño Esperado: 4096 bytes | Tamaño Leído: 32000 bytes
+    pageBreakLight_test.go:134: 
+        
+        
+=== RUN   TestAllCrash/__CrashNewPageBeforeWrite_1_Line_70
+    pageBreakLight_test.go:66: Info:  1 CrashNewPageBeforeWrite AddCrash:  70 CrashLine:  256 Interaccion:  500

@@ -39,6 +39,11 @@ type GlobalBufferPool struct {
 }
 
 // NewGlobalBufferPool inicializa el pool combinado con tamaños definidos en tiempo de ejecución.
+/*
+blockSize: tamaño del buffer alineado que se va a recibir, por ejemplo 4096
+blocksPerArena:  Es el número de blockSize que caben en una sola ARENA de RAM
+chunkSize: Es simplemente la cantidad de estructuras de Go (GlobalBuffer) que se guarda en un arreglo de metadatos
+*/
 func NewGlobalBufferPool(chunkSize uint32, blocksPerArena uint32, blockSize int64) *GlobalBufferPool {
 
 	totalSize := int(int64(blocksPerArena) * blockSize)

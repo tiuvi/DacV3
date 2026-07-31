@@ -1,6 +1,7 @@
 package dacV3
 
 import (
+	"context"
 	"log"
 	"os"
 	"sync"
@@ -22,6 +23,10 @@ type indexMaster struct {
 }
 
 type DacV3 struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
 	//Gestion del archivo principal
 	mu   sync.Mutex
 	file *os.File
@@ -41,14 +46,14 @@ type DacV3 struct {
 	//indexSearch ConcurrentMap[[32]byte , IndexSearch]
 
 	indexSearchPool           chan IndexPoolItem
-	indexSearchDataPool       *bufferArena
+	indexSearchDataPool       *GlobalBufferPool
 	indexAvailableSlotsSearch *atomic.Int64
 
 	//INDICES NORMALES
 	//Indices libres para escritura
 	indexPools map[uint32]chan IndexPoolItem
 	//Localizacion de los bufeer de los indices en un array, tamaño 4096
-	indexBuffer         *bufferArena
+	indexBuffer         *GlobalBufferPool
 	indexAvailableSlots map[uint32]*atomic.Int64
 
 	//PAGINAS
@@ -105,8 +110,8 @@ func NewDacV3Options(diskPath string, truncate bool, multiplierChan uint32) DacV
 		SsdNIopsMili:    100,
 		Truncate:        truncate,
 
-		//Opciones para indices normales
-		NBuffersAvailableIndex: 128,
+		//Opciones para indices normales + escrituras
+		NBuffersAvailableIndex: 128 + 128,
 
 		//Opciones para indexSearch dinamicos
 		NBuffersAvailableIndexSearch:     8,
@@ -153,9 +158,14 @@ func InitDacV3(opts DacV3Options) *DacV3 {
 
 	sfDacV3 := openFileDacV3(opts.DacRoute, opts.Truncate)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	sfDacV3.ctx = ctx
+	sfDacV3.cancel = cancel
+
 	//Worker para crear indices sin bloqueo
 	sfDacV3.needIndexChan = make(chan newIndexRequest, 512)
 
+	sfDacV3.wg.Add(1)
 	go sfDacV3.newIndexsManagerWorker()
 
 	sfDacV3.opts = &opts
@@ -184,42 +194,17 @@ func InitDacV3(opts DacV3Options) *DacV3 {
 	return sfDacV3
 }
 
-// Funciones de utilidad auxiliares para vaciar los canales (drenar) sin cerrarlos:
-func drainIndexPool(ch chan IndexPoolItem) {
-	if ch == nil {
-		return
-	}
-	for {
-		select {
-		case <-ch:
-			// Vaciando...
-		default:
-			// El canal está vacío, salimos
-			return
-		}
-	}
-}
-
-func drainNeedIndexChan(ch chan newIndexRequest) {
-	if ch == nil {
-		return
-	}
-	for {
-		select {
-		case <-ch:
-		default:
-			return
-		}
-	}
-}
-
 func (sfDacV3 *DacV3) Clear() {
 
 	if sfDacV3.dacV3WorkerWriter != nil {
 		sfDacV3.Stop()
 		sfDacV3.dacV3WorkerWriter = nil
 	}
-	
+
+	sfDacV3.cancel()
+	sfDacV3.wg.Wait()
+
+
 	// Bloqueamos la estructura principal
 	sfDacV3.mu.Lock()
 	defer sfDacV3.mu.Unlock()
@@ -232,7 +217,6 @@ func (sfDacV3 *DacV3) Clear() {
 	clear(sfDacV3.indexSearch)
 	clear(sfDacV3.indexAvailableSlots)
 	clear(sfDacV3.globalSizeSubIndex)
-	clear(sfDacV3.dataPools)
 	clear(sfDacV3.writeDataPools)
 
 	if sfDacV3.globalSizeIndex != nil {
@@ -243,12 +227,7 @@ func (sfDacV3 *DacV3) Clear() {
 		sfDacV3.PendingCorrupt = nil
 	}
 
-	drainNeedIndexChan(sfDacV3.needIndexChan)
-
-	drainIndexPool(sfDacV3.indexSearchPool)
-
-	for k, ch := range sfDacV3.indexPools {
-		drainIndexPool(ch)
+	for k := range sfDacV3.indexPools {
 		delete(sfDacV3.indexPools, k)
 	}
 
@@ -266,14 +245,15 @@ func (sfDacV3 *DacV3) Clear() {
 
 	sfDacV3.opts = nil
 
+
+	clear(sfDacV3.dataPools)
+
 	// Limpieza de bufferArena
 	if sfDacV3.indexBuffer != nil {
-		sfDacV3.indexBuffer.Clear()
 		sfDacV3.indexBuffer = nil
 	}
 
 	if sfDacV3.indexSearchDataPool != nil {
-		sfDacV3.indexSearchDataPool.Clear()
 		sfDacV3.indexSearchDataPool = nil
 	}
 

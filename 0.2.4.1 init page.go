@@ -1,16 +1,16 @@
 package dacV3
 
-//ESTA FUNCION ESTA MAL DEBUGEAR MIENTRAS DEBUGEO LOS WRITES
+// ESTA FUNCION ESTA MAL DEBUGEAR MIENTRAS DEBUGEO LOS WRITES
 // Inicia todas las paginas de un indice, añadie su id y posicion al mapa de datos pero no el buffer
 // Si el indice es indexSearch no se inicia
 func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 
-	buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
+	buf := sfDacV3.indexBuffer.Get(index.idLocationBuffer)
 	if buf == nil {
 		return
 	}
 
-	bufIndex := indexBuffer(buf)
+	bufIndex := (*indexBuffer)(buf)
 
 	// Si el indice es indexSearch no se inicia
 	var emptyHash [32]byte
@@ -28,15 +28,19 @@ func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 		}
 
 		// si en la lista se activo pero el subindice esta vacio borrarlo de la lista de activados
-		size := bufIndex.GetSubIndexSize(i)
-		if size == 0 {
+		hash := bufIndex.GetSubIndexHash(i)
+		if hash == hashZero {
 
-			bufIndex.unSetSubIndexHash(i)
+			bufIndex.UnSetIndexKept(i)
+
+			bufIndex.SetSubIndexSequence(i, 0)
+
+			bufIndex.SetSubIndexSize(i, 0)
+
 			needsUpdate = true
 			continue
 		}
 
-		hash := bufIndex.GetSubIndexHash(i)
 
 		seq := bufIndex.GetSubIndexSequence(i)
 
@@ -47,10 +51,10 @@ func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 
 			existingIndex := sfDacV3.indexLocation.Get(existingPage.idIndex)
 
-			existingBuf := sfDacV3.indexBuffer.getBufferArena(existingIndex.idLocationBuffer)
+			existingBuf := sfDacV3.indexBuffer.Get(existingIndex.idLocationBuffer)
 			if existingBuf != nil {
 
-				existingBufIndex := indexBuffer(existingBuf)
+				existingBufIndex := (*indexBuffer)(existingBuf)
 
 				existingSeq := existingBufIndex.GetSubIndexSequence(int(existingPage.idSubIndex))
 
@@ -82,7 +86,7 @@ func (sfDacV3 *DacV3) InitAllPagesPerIndex(idIndex uint32, index *Index) {
 
 	if needsUpdate {
 
-		sfDacV3.updateIndex(index)
+		sfDacV3.updateIndex(index, nil)
 
 	}
 }

@@ -7,23 +7,23 @@ import (
 var errIndexCorrupt = errors.New("indice corrupto")
 
 // loadAndVerifyIndexBlock (Helper) Centraliza la lógica de lectura y validación de bloques A/B
-func (sfDacV3 *DacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (uint32, [32]byte, error) {
+func (sfDacV3 *DacV3) loadAndVerifyIndexBlock(offset int64, targetBuf *indexBuffer) (uint32, [32]byte, error) {
 
 	// Leer y validar Bloque 1
-	sfDacV3.ReadAt(targetBuf, offset)
+	sfDacV3.ReadAt(targetBuf.buf, offset)
 
-	block1 := indexBuffer(targetBuf)
+	chk1, size1, seq1, hash1 := targetBuf.GetMetadata()
 
-	chk1, size1, seq1, hash1 := block1.GetMetadata()
-
-	valid1 := chk1 == block1.CalCheckSum()
+	valid1 := chk1 == targetBuf.CalCheckSum()
 
 	// Leer y validar Bloque 2 (Respaldo)
-	buf2 := MakeAlignedBlock(BufferAlignSize)
+	idBuffer2, buf2 := sfDacV3.indexBuffer.New()
 
-	sfDacV3.ReadAt(buf2, offset+BufferAlignSize) // ¡Bug corregido: Ahora se lee en buf2!
+	defer sfDacV3.indexBuffer.Free(idBuffer2)
 
-	block2 := indexBuffer(buf2)
+	sfDacV3.ReadAt(buf2.buf, offset+BufferAlignSize) // ¡Bug corregido: Ahora se lee en buf2!
+
+	block2 := (*indexBuffer)(buf2)
 
 	chk2, size2, seq2, hash2 := block2.GetMetadata()
 
@@ -38,7 +38,7 @@ func (sfDacV3 *DacV3) loadAndVerifyIndexBlock(offset int64, targetBuf []byte) (u
 	if valid2 {
 
 		// El bloque 2 es válido (y es el más reciente, o el bloque 1 estaba corrupto)
-		copy(targetBuf, buf2)
+		copy(targetBuf.buf, buf2.buf)
 
 		return size2, hash2, nil
 	}
@@ -52,49 +52,52 @@ func (sfDacV3 *DacV3) initIndex(offset int64) (idIndex uint32, sizePagination ui
 
 	idIndex, index = sfDacV3.indexLocation.New()
 
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
+	idBuffer, buf := sfDacV3.indexBuffer.New()
+
+	indexBufferCurrent := (*indexBuffer)(buf)
 
 	index.idLocationBuffer = idBuffer
 
 	index.offset = offset
 
-	sizePagination, hash, err = sfDacV3.loadAndVerifyIndexBlock(offset, buf)
+	sizePagination, hash, err = sfDacV3.loadAndVerifyIndexBlock(offset, indexBufferCurrent)
 	if err != nil {
 		return 0, 0, [32]byte{}, 0, nil, err
 	}
 
-	slotsFree = int64(indexBuffer(buf).CountEmptyIndex())
+	slotsFree = int64(indexBufferCurrent.CountEmptyIndex())
 
 	return idIndex, sizePagination, hash, slotsFree, index, nil
 }
 
 // LoadIndex Refresca el buffer del índice
 // Nota: Se ha añadido el retorno de 'error' para no fallar silenciosamente si hay corrupción.
-func (sfDacV3 *DacV3) LoadIndex(index *Index) (indexBuffer, error) {
+func (sfDacV3 *DacV3) LoadIndex(index *Index) (*indexBuffer, error) {
 
 	index.mu.Lock()
 	defer index.mu.Unlock()
 
 	if index.idLocationBuffer != 0 {
-		return sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer), nil
+		buf := sfDacV3.indexBuffer.Get(index.idLocationBuffer)
+		return (*indexBuffer)(buf), nil
 	}
 
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
+	idBuffer, buf := sfDacV3.indexBuffer.New()
 
 	index.idLocationBuffer = idBuffer
 
-	_, _, err := sfDacV3.loadAndVerifyIndexBlock(index.offset, buf)
+	_, _, err := sfDacV3.loadAndVerifyIndexBlock(index.offset, (*indexBuffer)(buf))
 
-	return buf, err // Si no puedes cambiar la firma de la función para devolver error, puedes ignorarlo aquí.
+	return (*indexBuffer)(buf), err // Si no puedes cambiar la firma de la función para devolver error, puedes ignorarlo aquí.
 }
 
 func newIndex(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idIndex uint32) {
 
 	idIndex, index := sfDacV3.indexLocation.New()
 
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
+	idBuffer, buf := sfDacV3.indexBuffer.New()
 
-	bufIndex := indexBuffer(buf)
+	bufIndex := (*indexBuffer)(buf)
 
 	bufIndex.SetSizePagination(sizePagination)
 
@@ -110,7 +113,7 @@ func newIndex(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idIndex uint
 	index.offset = offset
 
 	// Como sabemos que la secuencia es 1, escribimos directamente en el offset base
-	sfDacV3.WriteIndex(buf, offset)
+	sfDacV3.WriteIndex(bufIndex, offset , nil)
 
 	return idIndex
 }
@@ -119,9 +122,9 @@ func newIndexSearch(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idInde
 
 	idIndex, index := sfDacV3.indexLocation.New()
 
-	idBuffer, buf := sfDacV3.indexBuffer.addBufferArena()
+	idBuffer, buf := sfDacV3.indexBuffer.New()
 
-	bufIndex := indexBuffer(buf)
+	bufIndex := (*indexBuffer)(buf)
 
 	bufIndex.SetSizePagination(sizePagination)
 
@@ -145,16 +148,16 @@ func newIndexSearch(sfDacV3 *DacV3, offset int64, sizePagination uint32) (idInde
 	index.offset = offset
 
 	// Como sabemos que la secuencia es 1, escribimos directamente en el offset base
-	sfDacV3.WriteIndex(buf, offset)
+	sfDacV3.WriteIndex(bufIndex, offset , nil)
 
 	return idIndex
 }
 
-func (sfDacV3 *DacV3) updateIndex(index *Index) {
+func (sfDacV3 *DacV3) updateIndex(index *Index , onCopy func()) {
 
-	buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
+	buf := sfDacV3.indexBuffer.Get(index.idLocationBuffer)
 
-	bufIndex := indexBuffer(buf)
+	bufIndex := (*indexBuffer)(buf)
 
 	// Incrementamos la secuencia
 	sequence := bufIndex.GetSequence() + 1
@@ -174,33 +177,30 @@ func (sfDacV3 *DacV3) updateIndex(index *Index) {
 		targetOffset += BufferAlignSize
 	}
 
+	
 	if TestCrashEnergy == CrashWriteIndexCorrupt {
-		
-		for ind := 0; ind <= MaxSubIndexPerIndex; ind++ {
-			
-			bufIndex.unSetSubIndexHash(ind)
-			bufIndex.SetSubIndexSequence(ind, 0)
-			bufIndex.SetSubIndexSize(ind, 0)
 
+		if testCrashFuncIndex() {
+			
+			sfDacV3.WriteIndex(bufIndex, targetOffset , onCopy)
+
+			panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWriteIndexCorrupt")
 		}
 
-		sfDacV3.WriteIndex(buf, targetOffset)
-
-		panic("SIMULANDO CORTE DE ENERGÍA 🔌💥 CrashWriteIndexCorrupt")
 	}
 
 	// Escribimos en el bloque alternado que corresponda
 	// (Asegúrate de que sfDacV3.WriteIndex devuelva un error en tu código real para poder retornarlo)
-	sfDacV3.WriteIndex(buf, targetOffset)
+	sfDacV3.WriteIndex(bufIndex, targetOffset , onCopy) 
 
-	return
+
 }
 
 func (sfDacV3 *DacV3) getOffsetPageStart(index *Index, page *Page) int64 {
 
-	buf := sfDacV3.indexBuffer.getBufferArena(index.idLocationBuffer)
+	buf := sfDacV3.indexBuffer.Get(index.idLocationBuffer)
 
-	bufIndex := indexBuffer(buf)
+	bufIndex := (*indexBuffer)(buf)
 
 	config := sfDacV3.globalSizeSubIndex[bufIndex.GetSizePagination()]
 
@@ -209,7 +209,7 @@ func (sfDacV3 *DacV3) getOffsetPageStart(index *Index, page *Page) int64 {
 
 type indexHandle struct {
 	*Index
-	indexBuffer
+	Buf *indexBuffer
 }
 
 func (sfDacV3 *DacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
@@ -222,8 +222,8 @@ func (sfDacV3 *DacV3) newIndexHandle(idIndex uint32) (*indexHandle, error) {
 	}
 
 	return &indexHandle{
-		Index:       index,
-		indexBuffer: buf,
+		Index: index,
+		Buf:   (*indexBuffer)(buf),
 	}, nil
 
 }

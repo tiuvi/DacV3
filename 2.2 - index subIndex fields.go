@@ -6,9 +6,11 @@ import (
 )
 
 
-
+ 
 // Funciones para subindices
-func (b indexBuffer) setSubIndexHash(hash [32]byte, id int) {
+func (globBuf *indexBuffer) setSubIndexHash(hash [32]byte, id int) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
@@ -16,7 +18,7 @@ func (b indexBuffer) setSubIndexHash(hash [32]byte, id int) {
 	}
 
 	// Obtenemos el segmento de la página destinado a los subíndices
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 
 	// Calculamos el desplazamiento inicial para este subíndice en particular
 	offsetIndex := id * sizeSubIndex
@@ -26,7 +28,9 @@ func (b indexBuffer) setSubIndexHash(hash [32]byte, id int) {
 	copy(zoneSubIndex[offsetIndex:offsetIndex+32], hash[:])
 }
 
-func (b indexBuffer) unSetSubIndexHash(id int) {
+func (globBuf *indexBuffer) unSetSubIndexHash(id int) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
@@ -34,7 +38,7 @@ func (b indexBuffer) unSetSubIndexHash(id int) {
 	}
 
 	// Obtenemos el segmento de la página destinado a los subíndices
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 
 	// Calculamos el desplazamiento inicial para este subíndice en particular
 	offsetIndex := id * sizeSubIndex
@@ -44,13 +48,15 @@ func (b indexBuffer) unSetSubIndexHash(id int) {
 	clear(zoneSubIndex[offsetIndex : offsetIndex+sizeSubIndex])
 }
 
-func (b indexBuffer) GetSubIndexHash(id int) [32]byte {
+func (globBuf *indexBuffer) GetSubIndexHash(id int) [32]byte {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	var hash [32]byte
@@ -63,25 +69,30 @@ func (b indexBuffer) GetSubIndexHash(id int) [32]byte {
 var errSubIndexNameOverFlow = errors.New("tamaño maximo del nombre superado")
 var errSubIndexNameNotZero = errors.New("tamaño minimo del nombre no puede ser 0")
 
-func (b indexBuffer) SetSubIndexSize(id int, size int64) {
+func (globBuf *indexBuffer) SetSubIndexSize(id int, size int64) {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	// El Size ocupa desde el byte 32 al 40 relativos a este subíndice
 	binary.LittleEndian.PutUint64(zoneSubIndex[offsetIndex+subIndex_Size_Init:offsetIndex+subIndex_Size_End], uint64(size))
 }
 
-func (b indexBuffer) GetSubIndexSize(id int) int64 {
+func (globBuf *indexBuffer) GetSubIndexSize(id int) int64 {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
@@ -89,13 +100,15 @@ func (b indexBuffer) GetSubIndexSize(id int) int64 {
 	return int64(val)
 }
 
-func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido: Sequence y el parámetro
+func (globBuf *indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido: Sequence y el parámetro
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	// Corregido: Actualizado el comentario para que tenga sentido
@@ -106,12 +119,15 @@ func (b indexBuffer) SetSubIndexSequence(id int, sequence int64) { // Corregido:
 	)
 }
 
-func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
+func (globBuf *indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	// Leemos los 8 bytes como Uint64 y lo convertimos a int64
@@ -121,7 +137,9 @@ func (b indexBuffer) GetSubIndexSequence(id int) int64 { // Corregido: Sequence
 	return int64(val)
 }
 
-func (b indexBuffer) SetSubIndexName(id int, name string) error {
+func (globBuf *indexBuffer) SetSubIndexName(id int, name string) error {
+	globBuf.mu.Lock()
+	defer globBuf.mu.Unlock()
 
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
@@ -135,7 +153,7 @@ func (b indexBuffer) SetSubIndexName(id int, name string) error {
 		return errSubIndexNameNotZero
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 
 	offsetIndex := id * sizeSubIndex
 
@@ -154,12 +172,15 @@ func (b indexBuffer) SetSubIndexName(id int, name string) error {
 	return nil
 }
 
-func (b indexBuffer) GetSubIndexName(id int) string {
+func (globBuf *indexBuffer) GetSubIndexName(id int) string {
+	globBuf.mu.RLock()
+	defer globBuf.mu.RUnlock()
+
 	if id > MaxSubIndexPerIndex {
 		panic(errSubIndexOverFlow)
 	}
 
-	zoneSubIndex := b[field_subIndexInit:]
+	zoneSubIndex := globBuf.buf[field_subIndexInit:]
 	offsetIndex := id * sizeSubIndex
 
 	// Obtenemos el segmento exacto del nombre
